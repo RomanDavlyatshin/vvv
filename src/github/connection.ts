@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import gitConnect from './third-party/git-connect/git-connect';
-import { Octokit } from '@octokit/core';
+import getLedger, { Ledger } from '../lib/Ledger';
 
 const { REACT_APP_GITHUB_OAUTH_APP_CLIENT_ID, REACT_APP_GITHUB_OAUTH_APP_PROXY, REACT_APP_GITHUB_OAUTH_APP_SCOPES } = process.env;
 const connection = gitConnect({
@@ -29,13 +29,17 @@ const connection = gitConnect({
   // reponame: 'github_reponame', //application's repository name
 });
 
-let instance: Octokit;
-function getInstance() {
+let ledger: Ledger;
+async function getLedgerInstance() {
   if (!connection.isConnected()) return false;
-  if (instance) return instance;
+  if (ledger) return ledger;
   const auth = connection.getCookie('github_access_token');
-  instance = new Octokit({ auth });
-  return instance;
+  ledger = await getLedger(auth, {
+    url: String(process.env.REACT_APP_LEDGER_REPO_URL),
+    owner: String(process.env.REACT_APP_LEDGER_REPO_OWNER),
+    name: String(process.env.REACT_APP_LEDGER_REPO_NAME),
+  });
+  return ledger;
 }
 
 function connect() {
@@ -47,14 +51,14 @@ function disconnect() {
 }
 
 export interface Connector {
-  getInstance: () => false | Octokit;
+  getLedgerInstance: () => Promise<false | Ledger>;
   connect: () => void;
   disconnect: () => void;
   isConnected: () => boolean;
 }
 
 const connector: Connector = {
-  getInstance,
+  getLedgerInstance,
   connect,
   disconnect,
   isConnected: () => connection.isConnected(),

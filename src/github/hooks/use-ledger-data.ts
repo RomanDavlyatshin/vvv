@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 import { useEffect, useState } from 'react';
+import { LedgerData } from '../../lib/Ledger';
 import connection from '../connection';
 
 export default function () {
-  const [data, setData] = useState<any>();
+  const [data, setData] = useState<LedgerData>();
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -25,16 +26,8 @@ export default function () {
       try {
         setIsLoading(true);
         const ledger = await connection.getLedgerInstance();
-        if (!ledger) {
-          return;
-        }
-        const response = await ledger.getOctokitInstance().request(`GET /user`);
-        if (response.status !== 200) {
-          const msg = 'ERROR: Failed to obtain user data. Open development console, copy error log and contact the development team';
-          console.error(msg, '\n', 'response', response, '---ERROR LOG END---');
-          throw new Error(msg);
-        }
-        setData(response.data);
+        if (!ledger) return;
+        setData((await ledger.fetch())?.data);
       } catch (e) {
         console.error(e);
       } finally {

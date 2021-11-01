@@ -13,14 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './components/App';
+import useUser from '../github/hooks/use-user';
+import Spinner from './Spinner';
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root'),
-);
+export default function () {
+  const { isLoading, data } = useUser();
+  if (isLoading) {
+    return <Spinner> Waiting to receive user data... </Spinner>;
+  }
+
+  if (!data) {
+    return <div>you are not authenticated</div>;
+  }
+  return (
+    <div style={{ display: 'flex', marginRight: '15px' }}>
+      <span>Hi there</span>
+      <img style={{ margin: '0 7px' }} alt="user-avatar" className="avatar" src={data.avatar_url} />
+      <span>{data?.login}</span>
+      <span>!</span>
+    </div>
+  );
+}

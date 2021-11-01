@@ -13,16 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Octokit } from '@octokit/core';
-import { useEffect, useState } from 'react';
-import OctokitConnector from '../octokit';
-
-export default function () {
-  const [octokit, setOctokitInstance] = useState<false | Octokit>(false);
-
-  useEffect(() => {
-    setOctokitInstance(OctokitConnector.getInstance());
-  }, []);
-
-  return { octokit, connect: OctokitConnector.connect, disconnect: OctokitConnector.disconnect, isConnected: OctokitConnector.isConnected };
+export default function Spinner(props: any) {
+  if (props.children) return <div>{props.children}</div>;
+  return <div>...</div>;
 }

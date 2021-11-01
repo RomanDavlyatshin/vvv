@@ -31,38 +31,45 @@ import { b64_to_utf8, utf8_to_b64 } from './util';
 
 type LedgerRepoOptions = { url: string; owner: string; name: string };
 
-type LedgerData = {
-  components: any;
-  versions: any;
-  setups: any;
-  tests: any;
+export type LedgerData = {
+  components: Record<string, any>[];
+  versions: Record<string, any>[];
+  setups: Setup[];
+  tests: Record<string, any>[];
 };
 
-let ledger: Ledger;
-export default function getLedger(octokitAuthToken: string, ledgerRepo: LedgerRepoOptions) {
-  if (ledger) return ledger;
-  ledger = new Ledger({
+type Setup = {
+  id: string;
+  name: string;
+  components: ComponentIds;
+};
+
+type ComponentIds = string[];
+
+export default async function getLedger(octokitAuthToken: string, ledgerRepo: LedgerRepoOptions) {
+  const ledger = new Ledger({
     octokitAuthToken,
     ledgerRepo,
   });
+  await ledger.init();
   return ledger;
 }
 
-class Ledger {
-  octokit: Octokit | undefined;
-  auth: string;
-  ledgerRepo: LedgerRepoOptions;
+export class Ledger {
+  private octokit: Octokit | undefined;
+  private auth: string;
+  private ledgerRepo: LedgerRepoOptions;
 
-  ledgerFilePath: string = 'ledger.json';
-  defaultData: LedgerData = {
+  private ledgerFilePath: string = 'ledger.json';
+  private defaultData: LedgerData = {
     components: [],
     versions: [],
     setups: [],
     tests: [],
   };
 
-  data: LedgerData | undefined;
-  sha: string | undefined;
+  public data: LedgerData | undefined; // FIXME private
+  private sha: string | undefined;
 
   constructor(options: { octokitAuthToken: string; ledgerRepo: LedgerRepoOptions }) {
     const { octokitAuthToken, ledgerRepo } = options;
@@ -75,31 +82,98 @@ class Ledger {
     this.octokit = new Octokit({ auth: this.auth });
   }
 
-  async fetch() {
+  public getOctokitInstance() {
+    if (!this.octokit) throw new Error('You are not authorized with GitHub account');
+    return this.octokit;
+  }
+
+  public async fetch() {
     if (!this.octokit) return;
     const response = await this.octokit.request(
       `GET /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
-      {
-        raw: true,
-      },
     );
     if (response.status !== 200) {
       throw new Error(`Failed to load ledger data: ${response.data.error}`);
     }
-    this.updateData(response.data);
+    this.data = this.deserialize(response.data.content);
+    this.sha = response.data.sha;
+    return this;
   }
 
-  public async addComponent() {
-    await this.addTo('components', { name: 'Drill4J Admin Backend', id: 'admin-backend' });
+  private checkData(data: any): data is LedgerData {
+    return (
+      data &&
+      Array.isArray((data as LedgerData).components) &&
+      Array.isArray((data as LedgerData).versions) &&
+      Array.isArray((data as LedgerData).setups) &&
+      Array.isArray((data as LedgerData).tests)
+    );
   }
 
-  public async addSetup() {
-    await this.addTo('setups', {
-      id: 'single-java-agent',
-      name: 'Single Java Agent',
-      components: ['admin-backend', 'admin-ui', 'java-agent', 'java-autotest-agent'],
-    });
+  public async addComponent(data: Record<string, unknown>) {
+    if (!this.checkData(this.data)) {
+      throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
+    }
+
+    const alreadyExists = this.data.components.findIndex(x => x.id === data.id || x.name === data.name) > -1;
+    if (alreadyExists) {
+      throw new Error('Component with the same id or name already exists');
+    }
+
+    await this.addTo('components', data);
   }
+
+  public async addSetup(rawData: Setup) {
+    if (!this.checkData(this.data)) {
+      throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
+    }
+
+    const alreadyExists = this.data.setups.findIndex(x => x.id === rawData.id || x.name === rawData.name) > -1;
+    if (alreadyExists) {
+      throw new Error('Setup with the same id or name already exists');
+    }
+
+    if (!Array.isArray(rawData.components) || rawData.components.length === 0) {
+      throw new Error('Components array must contain at least one component id');
+    }
+
+    // check for components list uniqueness
+    // TODO use real hashing
+    const getComponentsHash = (components: ComponentIds) => {
+      let str = '';
+      for (let i = 0; i < components.length; i++) {
+        str += components[i];
+      }
+      return str;
+    };
+    const newHash = getComponentsHash(rawData.components);
+    const isUnique =
+      this.data.setups
+        .map(x => x.components)
+        .map(getComponentsHash)
+        .findIndex(hash => hash === newHash) === -1;
+
+    if (!isUnique) {
+      throw new Error('Setup with the same list of components already exist');
+    }
+
+    debugger;
+
+    const data = {
+      ...rawData,
+      components: (rawData as any).components.sort(),
+    };
+
+    await this.addTo('setups', data);
+  }
+
+  // public async addSetup() {
+  //   await this.addTo('setups', {
+  //     id: 'single-java-agent',
+  //     name: 'Single Java Agent',
+  //     components: ['admin-backend', 'admin-ui', 'java-agent', 'java-autotest-agent'],
+  //   });
+  // }
 
   public async addVersion() {
     await this.addTo('versions', { date: Date.now(), id: 'admin-backend', tag: '0.8.1-215', hash: 'hash-unique1' });
@@ -131,41 +205,72 @@ class Ledger {
     });
   }
 
-  updateData(data: any) {
-    this.data = this.deserialize(data.content);
-    this.sha = data.sha;
-  }
+  private async addTo(property: string, value: any, message = 'by Drill4J@VVVBot') {
+    const newData = {
+      ...this.data,
+      [property]: [...(this.data as any)[property], value],
+    };
 
-  async addTo(property: string, value: any, message = 'by Drill4J@VVVBot') {
-    if (!this.octokit) return;
-    if (!this.data) {
-      this.data = this.defaultData;
-    }
-
-    (this.data as any)[property] = [...(this.data as any)[property], value];
-
-    const response = await this.octokit.request(
+    const response = await (this.octokit as any).request(
       `PUT /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
       {
         message,
-        content: this.serialize(this.data),
+        content: this.serialize(newData as any),
         sha: this.sha,
       },
     );
     if (response.status !== 200) {
       throw new Error(`Failed to update ledger data: ${response.data.error}`);
     }
-    this.updateData(response.data);
+
+    const check = await (this.octokit as any).request(
+      `GET /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
+    );
+
+    (this.data as any) = newData;
+    this.sha = response.data.content.sha;
+
+    if (this.sha !== check.data.sha) {
+      const msg = 'CRITICAL ERROR: post-update SHA check failed. Open development console, copy error log and contact the development team';
+      console.error(msg, '\n', 'response data', '\n', response, '\n', 'check data', '\n', check, '\n', '---CRITICAL ERROR LOG END---');
+      throw new Error(msg);
+    }
   }
 
-  deserialize(rawData: any): LedgerData {
-    return {
-      ...rawData.data,
-      content: JSON.parse(b64_to_utf8(rawData.content)),
-    };
+  private deserialize(rawData: any): LedgerData {
+    return JSON.parse(b64_to_utf8(rawData));
   }
 
-  serialize(data: LedgerData): string {
+  private serialize(data: LedgerData): string {
     return utf8_to_b64(JSON.stringify(data));
   }
+
+  // private test() {
+  // console.log('adding...');
+  // const c = [];
+  // for (let i = 0; i < 10; i++) {
+  //   const start = Date.now();
+  //   const check = [];
+  //   for (let index = 0; index < 10; index++) {
+  //     const { a, b } = await this.addTo('components', { name: `Drill4J Admin Backend ${i} - ${index}`, id: 'admin-backend' });
+  //     check.push(a === b);
+  //   }
+  //   const elapsed = Date.now() - start;
+  //   console.log('elapsed', elapsed, check);
+  //   let f = check.reduce((a, x) => a && x, true);
+  //   c.push(f);
+  //   console.log('reduced', f);
+  //   await this.sleep(60 * 1000);
+  // }
+  // console.log('done', c);
+  // }
+
+  // sleep(ms: number) {
+  //   console.log('sleep ms', ms);
+  //   return new Promise((resolve, reject) => {
+  //     setTimeout(() => {
+  //       resolve(null);
+  //     }, ms);
+  //   });
+  // }
 }

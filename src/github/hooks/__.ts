@@ -13,14 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './components/App';
+import { useEffect, useState } from 'react';
+import connection from '../connection';
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root'),
-);
+export default function () {
+  const [data, setData] = useState<any>({});
+
+  useEffect(() => {
+    (async () => {
+      const ledger = await connection.getLedgerInstance();
+      if (!ledger) return;
+      setData((await ledger.fetch())?.data);
+    })();
+  }, []);
+
+  return data;
+}
