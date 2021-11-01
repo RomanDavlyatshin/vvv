@@ -13,24 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import useUser from '../github/hooks/use-user';
-import Spinner from './spinner';
-
 export default function () {
-  const { isLoading, data } = useUser();
-  if (isLoading) {
-    return <Spinner> Waiting to receive user data... </Spinner>;
-  }
-
-  if (!data) {
-    return <div>you are not authenticated</div>;
-  }
   return (
-    <div style={{ display: 'flex', marginRight: '15px' }}>
-      <span>Hi there</span>
-      <img style={{ margin: '0 7px' }} alt="user-avatar" className="avatar" src={data.avatar_url} />
-      <span>{data?.login}</span>
-      <span>!</span>
+    <div style={{ position: 'relative' }}>
+      <div
+        style={{
+          position: 'absolute',
+          display: 'flex',
+          alignItems: 'center',
+          alignContent: 'center',
+          height: 'calc(100vh - 39px)',
+          width: '100%',
+        }}
+      >
+        <h2 style={{ flex: '1', textAlign: 'center' }}>
+          You cannot see anything yet <br />
+          because <br /> you must login
+        </h2>
+      </div>
+      <img
+        alt="placeholder"
+        style={{ width: '100%', height: 'calc(100vh - 39px)' }}
+        src="https://img5.goodfon.ru/original/1920x1080/c/cb/sea-bird-grey-ocean.jpg"
+      />
     </div>
   );
 }

@@ -20,8 +20,12 @@
 // await ledger.load();
 
 import { Octokit } from '@octokit/core';
+import { LedgerRepoOptions, LedgerData, Setup, Version, RawVersion, TestResult, RawTestResult } from './types';
 import { b64_to_utf8, utf8_to_b64 } from './util';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 
+dayjs.extend(relativeTime);
 // class TokenObtainer {
 //   token: string;
 
@@ -29,32 +33,17 @@ import { b64_to_utf8, utf8_to_b64 } from './util';
 //   discard() {}
 // }
 
-type LedgerRepoOptions = { url: string; owner: string; name: string };
-
-export type LedgerData = {
-  components: Record<string, any>[];
-  versions: Record<string, any>[];
-  setups: Setup[];
-  tests: Record<string, any>[];
-};
-
-type Setup = {
-  id: string;
-  name: string;
-  components: ComponentIds;
-};
-
-type ComponentIds = string[];
-
 export default async function getLedger(octokitAuthToken: string, ledgerRepo: LedgerRepoOptions) {
   const ledger = new Ledger({
     octokitAuthToken,
     ledgerRepo,
+    isCli: false,
   });
   await ledger.init();
   return ledger;
 }
 
+type LedgerConstructorOptions = { octokitAuthToken: string; ledgerRepo: LedgerRepoOptions; isCli?: boolean };
 export class Ledger {
   private octokit: Octokit | undefined;
   private auth: string;
@@ -71,10 +60,13 @@ export class Ledger {
   public data: LedgerData | undefined; // FIXME private
   private sha: string | undefined;
 
-  constructor(options: { octokitAuthToken: string; ledgerRepo: LedgerRepoOptions }) {
-    const { octokitAuthToken, ledgerRepo } = options;
+  private isCli: boolean;
+
+  constructor(options: LedgerConstructorOptions) {
+    const { octokitAuthToken, ledgerRepo, isCli = true } = options;
     this.auth = octokitAuthToken;
     this.ledgerRepo = ledgerRepo;
+    this.isCli = isCli;
   }
 
   public init() {
@@ -99,17 +91,6 @@ export class Ledger {
     this.sha = response.data.sha;
     return this;
   }
-
-  private checkData(data: any): data is LedgerData {
-    return (
-      data &&
-      Array.isArray((data as LedgerData).components) &&
-      Array.isArray((data as LedgerData).versions) &&
-      Array.isArray((data as LedgerData).setups) &&
-      Array.isArray((data as LedgerData).tests)
-    );
-  }
-
   public async addComponent(data: Record<string, unknown>) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
@@ -139,7 +120,7 @@ export class Ledger {
 
     // check for components list uniqueness
     // TODO use real hashing
-    const getComponentsHash = (components: ComponentIds) => {
+    const getComponentsHash = (components: string[]) => {
       let str = '';
       for (let i = 0; i < components.length; i++) {
         str += components[i];
@@ -157,8 +138,6 @@ export class Ledger {
       throw new Error('Setup with the same list of components already exist');
     }
 
-    debugger;
-
     const data = {
       ...rawData,
       components: (rawData as any).components.sort(),
@@ -167,44 +146,96 @@ export class Ledger {
     await this.addTo('setups', data);
   }
 
-  // public async addSetup() {
-  //   await this.addTo('setups', {
-  //     id: 'single-java-agent',
-  //     name: 'Single Java Agent',
-  //     components: ['admin-backend', 'admin-ui', 'java-agent', 'java-autotest-agent'],
-  //   });
-  // }
+  public async addVersion(data: RawVersion) {
+    if (!this.checkData(this.data)) {
+      throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
+    }
 
-  public async addVersion() {
-    await this.addTo('versions', { date: Date.now(), id: 'admin-backend', tag: '0.8.1-215', hash: 'hash-unique1' });
+    const { component, tag } = data;
+    const isComponentExists = this.data.components.findIndex(x => x.id === component) > -1;
+    if (!isComponentExists) {
+      const msg = `Component with id ${component} doesn't exists, but it will be added automatically. Later, you can edit it's parameters manually`;
+      this.isCli ? console.warn(msg) : alert(msg);
+      await this.addComponent({ id: component, name: component });
+    }
+
+    // const componentVersions = this.data.versions.filter(version => version.component === component);
+    // const existingVersion = componentVersions.find(version => version.tag === tag);
+    const existingVersion = this.findComponentVersion(component, tag);
+    if (existingVersion) {
+      const msg = `
+      Version ${component}:${tag} already exists.
+      It created at ${dayjs(existingVersion.date).format('DD/MM/YY hh:mm:ss')}.
+      Duplicate version will be added and take priority over the previous one.
+      But you will still able to see it in the version table.
+    `;
+      this.isCli ? console.warn(msg) : alert(msg);
+    }
+
+    await this.addTo('versions', { date: Date.now(), component, tag });
   }
 
-  // public async addTest(sha) {
-  // this.fetch()
-  // false sense of security?
-  // if (this.sha !== sha) throw new Error('data has changed since last fetch')
-  public async addTest() {
+  public async getLatestComponentVersion(componentId: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+    // TODO sort
+    return this.data.versions.find(version => version.component === componentId);
+  }
+
+  public async addTest(data: RawTestResult) {
+    if (!this.checkData(this.data)) {
+      throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
+    }
+
+    // existing setup
+    const isSetupExists = this.data.setups.findIndex(setup => setup.id === data.setupId) > -1;
+    if (!isSetupExists) {
+      const msg = `Setup with id ${data.setupId} doesn't exists.
+      Test result will be saved, but will only be visible in raw tests data table.
+      Make sure to add ${data.setupId} to setups list.`;
+      this.isCli ? console.warn(msg) : alert(msg);
+    }
+
+    // non-empty status
+    if (!data.status || typeof data.status !== 'string') {
+      throw new Error('Test result must contain non-empty status string');
+    }
+
+    // existing component versions
+    let errorMsg = '';
+    for (const component in data.componentVersionMap) {
+      const versionTag = data.componentVersionMap[component];
+      const version = this.findComponentVersion(component, versionTag);
+      if (!version) {
+        errorMsg = `${component}:${versionTag} does not exists!\n`;
+      }
+    }
+    if (errorMsg) {
+      errorMsg += `Test result will be saved, but make sure to add these versions`;
+      this.isCli ? console.warn(errorMsg) : alert(errorMsg);
+    }
+
     await this.addTo('tests', {
       date: Date.now(),
-      status: 'passed',
-      setup: 'single-java-agent',
-      versions: [
-        {
-          'admin-backend': 'hash-unique1',
-        },
-        {
-          'admin-ui': 'hash-unique2',
-        },
-        {
-          'java-agent': 'hash-unique3',
-        },
-        {
-          'java-autotest-agent': 'hash-unique4',
-        },
-      ],
+      ...data,
     });
   }
 
+  private checkData(data: any): data is LedgerData {
+    return (
+      data &&
+      Array.isArray((data as LedgerData).components) &&
+      Array.isArray((data as LedgerData).versions) &&
+      Array.isArray((data as LedgerData).setups) &&
+      Array.isArray((data as LedgerData).tests)
+    );
+  }
+
+  private findComponentVersion(component: string, versionTag: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+    const componentVersions = this.data.versions.filter(version => version.component === component);
+    const existingVersion = componentVersions.find(version => version.tag === versionTag);
+    return existingVersion;
+  }
   private async addTo(property: string, value: any, message = 'by Drill4J@VVVBot') {
     const newData = {
       ...this.data,

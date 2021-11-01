@@ -19,9 +19,11 @@ import useLedgerData from '../github/hooks/use-ledger-data';
 import connection from '../github/connection';
 import FormAddComponent from './forms/add-component';
 import FormAddSetup from './forms/add-setup';
-import Spinner from './Spinner';
-import User from './User';
-import UpdatedTimer from './UpdatedTimer';
+import FormAddVersion from './forms/add-version';
+import Spinner from './spinner';
+import User from './user';
+import Nothing from './placeholder';
+import UpdatedTimer from './refreshed-timer';
 
 function App() {
   return (
@@ -36,7 +38,7 @@ function App() {
         </div>
         <User />
       </div>
-      <div>{connection.isConnected() && <RenderStuff />}</div>
+      <div className="main-ui">{connection.isConnected() ? <RenderStuff /> : <Nothing />}</div>
     </div>
   );
 }
@@ -45,14 +47,16 @@ function RenderStuff() {
   const { isLoading, data } = useLedgerData();
   return (
     <div className="p-2">
-      <h2>Ledger</h2>
       {isLoading ? <Spinner>Loading ledger data...</Spinner> : <Ledger data={data} />}
       <div className="row mt-5">
-        <div className="col-3">
+        <div className="col-12 col-md-6 col-xl-3">
           <FormAddComponent />
         </div>
-        <div className="col-3">
+        <div className="col-12 col-md-6 col-xl-3">
           <FormAddSetup />
+        </div>
+        <div className="col-12 col-md-6 col-xl-3">
+          <FormAddVersion />
         </div>
       </div>
     </div>
@@ -61,6 +65,7 @@ function RenderStuff() {
 
 function Ledger(props: any) {
   const data = props.data;
+  console.log('Ledger render', data);
   if (!data) return <Spinner>No data</Spinner>;
   const { components, setups, versions, tests } = data;
   return (

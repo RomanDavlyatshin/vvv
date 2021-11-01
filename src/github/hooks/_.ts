@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { useEffect, useState } from 'react';
-import { Ledger } from '../../lib/Ledger';
+import { Ledger } from '../../lib/ledger';
 import InitLedger from '../connection';
 
 export default function () {

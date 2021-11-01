@@ -27,16 +27,26 @@ button:focus {
   cursor: pointer;
 }
 
+.main-ui {
+  padding-top: 39px;
+}
+
 .header {
   display: flex;
   align-items: center;
   background-color: rgb(60, 60, 60);
+  position: fixed;
+  width: 100%;
 }
 
 form {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+form label {
+  color: rgb(106, 138, 85);
 }
 
 form * {

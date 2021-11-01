@@ -15,14 +15,17 @@
  */
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import connection from '../../github/connection';
+import SelectField from './generic/select-field';
 import useLedgerData from '../../github/hooks/use-ledger-data';
 import { LedgerData } from '../../lib/types';
 import Spinner from '../spinner';
+import { handleInputChange } from 'react-select/dist/declarations/src/utils';
+import { useState } from 'react';
 
 export default () => {
   return (
     <>
-      <h3>New setup</h3>
+      <h3>New version</h3>
       <RenderStuff />
     </>
   );
@@ -38,24 +41,26 @@ function RenderStuff() {
     return <Spinner>No available components. Create components first</Spinner>;
   }
 
-  return <RenderForm data={data} />;
+  return <RenderForm components={data.components} />;
 }
 
-function RenderForm(props: { data: LedgerData }) {
+function RenderForm(props: { components: Record<string, any>[] }) {
+  const options = props.components.map(x => ({ value: x.id, label: x.name }));
+  const [versionPlaceholder, setVersionPlaceholder] = useState('x.y.z');
+
   return (
     <Formik
-      initialValues={{ id: '', name: '' }}
+      initialValues={{ component: '', tag: '', date: '' }}
       onSubmit={async (values, { setSubmitting }) => {
         try {
-          const { id, name, ...other } = values;
-          const startsWith = (search: string) => (str: string) => str.indexOf(search) === 0;
-          const stripComponentPrefix = (x: string) => x.replace(/^component-/g, '');
-          const components = Object.keys(other).filter(startsWith('component-')).map(stripComponentPrefix);
-
           const ledger = await connection.getLedgerInstance();
           if (!ledger) return;
+          debugger;
+          await ledger.addVersion({
+            component: values.component,
+            tag: values.tag,
+          });
 
-          await ledger.addSetup({ id, name, components });
           window.location.reload(); // pro react development
         } catch (e) {
           alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
@@ -66,24 +71,27 @@ function RenderForm(props: { data: LedgerData }) {
     >
       {({ isSubmitting }) => (
         <Form>
-          <label htmlFor="add-component-field-id">Unique id</label>
-          <Field id="add-component-field-id" type="text" name="id" placeholder="unique-dash-lower-case-id" />
-          <ErrorMessage name="id" component="div" />
+          <label htmlFor="add-version-field-component-id">Component id</label>
+          <Field
+            id="add-version-field-component-id"
+            name={'component'}
+            component={SelectField(async (componentId: string, form) => {
+              const ledger = await connection.getLedgerInstance();
+              if (!ledger) return;
+              const latestVersion = await ledger.getLatestComponentVersion(componentId);
+              if (!latestVersion) {
+                setVersionPlaceholder('x.y.z');
+                return;
+              }
+              setVersionPlaceholder(`latest is ${latestVersion.tag}`);
+            })}
+            options={options}
+          />
+          <ErrorMessage name="component-id" component="div" />
 
-          <label htmlFor="add-setup-field-name">Human-readable name</label>
-          <Field id="add-setup-field-name" type="text" name="name" placeholder="Awesome Services Flow" />
-          <ErrorMessage name="name" component="div" />
-
-          <label htmlFor="id">Select components</label>
-
-          {props.data.components.map(component => (
-            <div>
-              <Field id={`add-setup-field-${component.id}`} type="checkbox" name={`component-${component.id}`} />
-              <label style={{ paddingLeft: '7px' }} htmlFor={`add-setup-field-${component.id}`}>
-                {component.name}
-              </label>
-            </div>
-          ))}
+          <label htmlFor="add-version-field-tag">Version Tag</label>
+          <Field id="add-component-field-tag" type="text" name="tag" placeholder={versionPlaceholder} />
+          <ErrorMessage name="tag" component="div" />
 
           <button type="submit" disabled={isSubmitting}>
             Submit

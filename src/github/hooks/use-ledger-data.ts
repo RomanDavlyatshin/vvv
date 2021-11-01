@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { useEffect, useState } from 'react';
-import { LedgerData } from '../../lib/Ledger';
+import { LedgerData } from '../../lib/types';
 import connection from '../connection';
 
 export default function () {

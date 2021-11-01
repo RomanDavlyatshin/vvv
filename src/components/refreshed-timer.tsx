@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useState, useEffect } from 'react';
 
 dayjs.extend(relativeTime);
 
-export default function UpdatedTimer(props: any) {
+export default function RefreshedTimer(props: any) {
   const [elapsedStr, setElapsedStr] = useState('now');
-  const updateFrequency = 1000 * 30;
+  const updateFrequency = 1000 * 10;
 
   useEffect(() => {
-    const start = new (dayjs as any)(); // TODO fix dayjs import issue
+    const start = dayjs();
     setInterval(() => {
       setElapsedStr(start.fromNow());
     }, updateFrequency);
@@ -32,7 +32,7 @@ export default function UpdatedTimer(props: any) {
 
   return (
     <div>
-      Updated <span style={{ color: 'rgb(226,180,128)' }}>{elapsedStr}</span>
+      Refreshed <span style={{ color: 'rgb(226,180,128)' }}>{elapsedStr}</span>
     </div>
   );
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import gitConnect from './third-party/git-connect/git-connect';
-import getLedger, { Ledger } from '../lib/Ledger';
+import getLedger, { Ledger } from '../lib/ledger';
 
 const { REACT_APP_GITHUB_OAUTH_APP_CLIENT_ID, REACT_APP_GITHUB_OAUTH_APP_PROXY, REACT_APP_GITHUB_OAUTH_APP_SCOPES } = process.env;
 const connection = gitConnect({
