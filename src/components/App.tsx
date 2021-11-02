@@ -20,6 +20,7 @@ import connection from '../github/connection';
 import FormAddComponent from './forms/add-component';
 import FormAddSetup from './forms/add-setup';
 import FormAddVersion from './forms/add-version';
+import FormAddTest from './forms/add-test';
 import Spinner from './spinner';
 import User from './user';
 import Nothing from './placeholder';
@@ -57,6 +58,9 @@ function RenderStuff() {
         </div>
         <div className="col-12 col-md-6 col-xl-3">
           <FormAddVersion />
+        </div>
+        <div className="col-12 col-md-6 col-xl-3">
+          <FormAddTest />
         </div>
       </div>
     </div>

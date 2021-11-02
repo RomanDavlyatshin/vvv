@@ -19,7 +19,7 @@ import React from 'react';
 import Select, * as ReactSelect from 'react-select';
 
 // TODO fix dirty hacks with cb
-export default (cb: (componentId: string, form: any) => Promise<void>): React.SFC<ReactSelect.Props & FieldProps> =>
+export default (onChangeCb: (...args: any[]) => any): React.SFC<ReactSelect.Props & FieldProps> =>
   ({ options, field, form }) =>
     (
       <Select
@@ -28,7 +28,7 @@ export default (cb: (componentId: string, form: any) => Promise<void>): React.SF
         value={options ? options.find((option: any) => option.value === field.value) : ''}
         onChange={(option: any) => {
           form.setFieldValue(field.name, option.value);
-          cb(option.value, form);
+          onChangeCb(option.value, form);
         }}
         onBlur={field.onBlur}
       />

@@ -19,18 +19,21 @@ import Spinner from './spinner';
 export default function () {
   const { isLoading, data } = useUser();
   if (isLoading) {
-    return <Spinner> Waiting to receive user data... </Spinner>;
+    return <Spinner> waiting to receive user data... </Spinner>;
   }
 
   if (!data) {
     return <div>you are not authenticated</div>;
   }
+
   return (
     <div style={{ display: 'flex', marginRight: '15px' }}>
       <span>Hi there</span>
-      <img style={{ margin: '0 7px' }} alt="user-avatar" className="avatar" src={data.avatar_url} />
-      <span>{data?.login}</span>
-      <span>!</span>
+      <a className="github-user-link" href={data?.html_url}>
+        <img style={{ margin: '0 7px' }} alt="user-avatar" className="avatar" src={data.avatar_url} />
+        <span>{data?.login}</span>
+        <span>!</span>
+      </a>
     </div>
   );
 }

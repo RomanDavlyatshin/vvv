@@ -18,6 +18,7 @@ import connection from '../../github/connection';
 import useLedgerData from '../../github/hooks/use-ledger-data';
 import { LedgerData } from '../../lib/types';
 import Spinner from '../spinner';
+import { startsWith, stripPrefix } from './util';
 
 export default () => {
   return (
@@ -48,14 +49,13 @@ function RenderForm(props: { data: LedgerData }) {
       onSubmit={async (values, { setSubmitting }) => {
         try {
           const { id, name, ...other } = values;
-          const startsWith = (search: string) => (str: string) => str.indexOf(search) === 0;
-          const stripComponentPrefix = (x: string) => x.replace(/^component-/g, '');
-          const components = Object.keys(other).filter(startsWith('component-')).map(stripComponentPrefix);
+
+          const componentIds = Object.keys(other).filter(startsWith('component-')).map(stripPrefix('component-'));
 
           const ledger = await connection.getLedgerInstance();
           if (!ledger) return;
 
-          await ledger.addSetup({ id, name, components });
+          await ledger.addSetup({ id, name, componentIds });
           window.location.reload(); // pro react development
         } catch (e) {
           alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));

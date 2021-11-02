@@ -30,7 +30,7 @@ export type Component = {
 export type Setup = {
   id: string;
   name: string;
-  components: string[];
+  componentIds: string[];
 };
 
 export type RawVersion = {

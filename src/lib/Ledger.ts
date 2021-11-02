@@ -20,18 +20,12 @@
 // await ledger.load();
 
 import { Octokit } from '@octokit/core';
-import { LedgerRepoOptions, LedgerData, Setup, Version, RawVersion, TestResult, RawTestResult } from './types';
+import { LedgerRepoOptions, LedgerData, Setup, RawVersion, RawTestResult, Component } from './types';
 import { b64_to_utf8, utf8_to_b64 } from './util';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 dayjs.extend(relativeTime);
-// class TokenObtainer {
-//   token: string;
-
-//   getNew() {}
-//   discard() {}
-// }
 
 export default async function getLedger(octokitAuthToken: string, ledgerRepo: LedgerRepoOptions) {
   const ledger = new Ledger({
@@ -91,31 +85,31 @@ export class Ledger {
     this.sha = response.data.sha;
     return this;
   }
-  public async addComponent(data: Record<string, unknown>) {
+
+  public async addComponent(data: Component) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
-    const alreadyExists = this.data.components.findIndex(x => x.id === data.id || x.name === data.name) > -1;
-    if (alreadyExists) {
+    if (this.isComponentExists(data.id, data.name)) {
       throw new Error('Component with the same id or name already exists');
     }
 
     await this.addTo('components', data);
   }
 
-  public async addSetup(rawData: Setup) {
+  public async addSetup(rawSetupData: Setup) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
-    const alreadyExists = this.data.setups.findIndex(x => x.id === rawData.id || x.name === rawData.name) > -1;
-    if (alreadyExists) {
-      throw new Error('Setup with the same id or name already exists');
+    if (!Array.isArray(rawSetupData.componentIds) || rawSetupData.componentIds.length === 0) {
+      throw new Error('Components array must contain at least one component id');
     }
 
-    if (!Array.isArray(rawData.components) || rawData.components.length === 0) {
-      throw new Error('Components array must contain at least one component id');
+    const alreadyExists = this.data.setups.findIndex(x => x.id === rawSetupData.id || x.name === rawSetupData.name) > -1;
+    if (alreadyExists) {
+      throw new Error('Setup with the same id or name already exists');
     }
 
     // check for components list uniqueness
@@ -127,10 +121,10 @@ export class Ledger {
       }
       return str;
     };
-    const newHash = getComponentsHash(rawData.components);
+    const newHash = getComponentsHash(rawSetupData.componentIds);
     const isUnique =
       this.data.setups
-        .map(x => x.components)
+        .map(x => x.componentIds)
         .map(getComponentsHash)
         .findIndex(hash => hash === newHash) === -1;
 
@@ -138,12 +132,29 @@ export class Ledger {
       throw new Error('Setup with the same list of components already exist');
     }
 
+    // validate components existence
+    const nonExistentComponents = rawSetupData.componentIds.filter(x => !this.isComponentExists(x));
+    if (nonExistentComponents.length > 0) {
+      throw new Error(`Components with the following ids do not exist:\n${nonExistentComponents.join('\n')}`);
+    }
+
     const data = {
-      ...rawData,
-      components: (rawData as any).components.sort(),
+      ...rawSetupData,
+      components: rawSetupData.componentIds.sort(),
     };
 
     await this.addTo('setups', data);
+  }
+
+  // TODO deal with polymorphic function signature phobia
+  private isComponentExists(id: string, name?: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+
+    if (name) {
+      return this.data.components.findIndex(x => x.id === id && x.name === name) > -1;
+    }
+
+    return this.data.components.findIndex(x => x.id === id) > -1;
   }
 
   public async addVersion(data: RawVersion) {
@@ -152,20 +163,17 @@ export class Ledger {
     }
 
     const { component, tag } = data;
-    const isComponentExists = this.data.components.findIndex(x => x.id === component) > -1;
-    if (!isComponentExists) {
+    if (!this.isComponentExists(component)) {
       const msg = `Component with id ${component} doesn't exists, but it will be added automatically. Later, you can edit it's parameters manually`;
       this.isCli ? console.warn(msg) : alert(msg);
       await this.addComponent({ id: component, name: component });
     }
 
-    // const componentVersions = this.data.versions.filter(version => version.component === component);
-    // const existingVersion = componentVersions.find(version => version.tag === tag);
     const existingVersion = this.findComponentVersion(component, tag);
     if (existingVersion) {
       const msg = `
       Version ${component}:${tag} already exists.
-      It created at ${dayjs(existingVersion.date).format('DD/MM/YY hh:mm:ss')}.
+      It was created at ${dayjs(existingVersion.date).format('DD/MM/YY hh:mm:ss')}.
       Duplicate version will be added and take priority over the previous one.
       But you will still able to see it in the version table.
     `;

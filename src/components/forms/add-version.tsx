@@ -17,10 +17,9 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import connection from '../../github/connection';
 import SelectField from './generic/select-field';
 import useLedgerData from '../../github/hooks/use-ledger-data';
-import { LedgerData } from '../../lib/types';
 import Spinner from '../spinner';
-import { handleInputChange } from 'react-select/dist/declarations/src/utils';
 import { useState } from 'react';
+import { Component } from '../../lib/types';
 
 export default () => {
   return (
@@ -44,9 +43,29 @@ function RenderStuff() {
   return <RenderForm components={data.components} />;
 }
 
-function RenderForm(props: { components: Record<string, any>[] }) {
-  const options = props.components.map(x => ({ value: x.id, label: x.name }));
+function RenderForm(props: { components: Component[] }) {
+  const components = props.components.map(x => ({ value: x.id, label: x.name }));
   const [versionPlaceholder, setVersionPlaceholder] = useState('x.y.z');
+
+  const awesomeHandler = async (selectedValue: unknown) => {};
+  /*
+    
+    // add version
+    <ComponentPicker
+      onSelect = {(component) => setPlaceholder(component.version))
+    >
+
+    <ComponentPicker
+      onSelect = {(component) => showVersionInput(component.id))
+    >
+
+  */
+
+  const mapper = async (value: string) => {
+    const ledger = await connection.getLedgerInstance();
+    if (!ledger) return;
+    const latestVersion = await ledger.getLatestComponentVersion(value);
+  };
 
   return (
     <Formik
@@ -55,7 +74,7 @@ function RenderForm(props: { components: Record<string, any>[] }) {
         try {
           const ledger = await connection.getLedgerInstance();
           if (!ledger) return;
-          debugger;
+
           await ledger.addVersion({
             component: values.component,
             tag: values.tag,
@@ -71,21 +90,22 @@ function RenderForm(props: { components: Record<string, any>[] }) {
     >
       {({ isSubmitting }) => (
         <Form>
-          <label htmlFor="add-version-field-component-id">Component id</label>
+          <label htmlFor="add-version-field-component-id">Component</label>
           <Field
             id="add-version-field-component-id"
             name={'component'}
-            component={SelectField(async (componentId: string, form) => {
-              const ledger = await connection.getLedgerInstance();
-              if (!ledger) return;
-              const latestVersion = await ledger.getLatestComponentVersion(componentId);
-              if (!latestVersion) {
-                setVersionPlaceholder('x.y.z');
-                return;
-              }
-              setVersionPlaceholder(`latest is ${latestVersion.tag}`);
-            })}
-            options={options}
+            component={SelectField(awesomeHandler)}
+            // component={SelectField(async (componentId: string, form) => {
+            //   const ledger = await connection.getLedgerInstance();
+            //   if (!ledger) return;
+            //   const latestVersion = await ledger.getLatestComponentVersion(componentId);
+            //   if (!latestVersion) {
+            //     setVersionPlaceholder('x.y.z');
+            //     return;
+            //   }
+            //   setVersionPlaceholder(`latest is ${latestVersion.tag}`);
+            // })}
+            options={components}
           />
           <ErrorMessage name="component-id" component="div" />
 
