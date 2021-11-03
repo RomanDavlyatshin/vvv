@@ -57,9 +57,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
               id="add-test-field-setup-id"
               name={'setupId'}
               component={SelectField(async (setupId: string, form) => {
-                const ledger = await connection.getLedgerInstance();
-                if (!ledger) return;
-                const components = await ledger.getSetupComponents(setupId);
+                const components = await props.ledger.getSetupComponents(setupId);
                 setComponents(components);
               })}
               options={setups}

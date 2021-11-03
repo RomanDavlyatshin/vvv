@@ -34,10 +34,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
         initialValues={{ componentId: '', tag: '', date: '' }}
         onSubmit={async (values, { setSubmitting }) => {
           try {
-            const ledger = await connection.getLedgerInstance();
-            if (!ledger) return;
-
-            await ledger.addVersion({
+            await props.ledger.addVersion({
               componentId: values.componentId,
               tag: values.tag,
             });
