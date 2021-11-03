@@ -15,7 +15,6 @@
  */
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import SelectField from './generic/select-field';
-import useLedgerData from '../../github/hooks/use-ledger-data';
 import Spinner from '../spinner';
 import { Component, LedgerData } from '../../lib/types';
 import { useState } from 'react';
