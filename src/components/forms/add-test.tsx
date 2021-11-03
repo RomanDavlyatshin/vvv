@@ -18,9 +18,8 @@ import SelectField from './generic/select-field';
 import Spinner from '../spinner';
 import { Component, LedgerData } from '../../lib/types';
 import { useState } from 'react';
-import connection from '../../github/connection';
-import SelectFieldAsync from './generic/__select-field-async';
 import { Ledger } from '../../lib/ledger';
+import { startsWith, stripPrefix } from './util';
 
 export default (props: { ledger: Ledger; data: LedgerData }) => {
   if (!Array.isArray(props.data.setups) || props.data.setups.length === 0) {
@@ -33,16 +32,23 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
       <h3>New test result</h3>
       <Formik
         initialValues={{ setupId: '', status: '' }}
-        onSubmit={async (values, { setSubmitting }) => {
+        onSubmit={async ({ setupId, status, ...other }, { setSubmitting }) => {
           try {
-            console.log(values);
+            const componentVersionMap = Object.entries(other)
+              .filter(([key]) => startsWith('component-')(key))
+              .reduce((a: Record<string, string>, [key, version]) => {
+                a[stripPrefix('component-')(key)] = version;
+                return a;
+              }, {});
 
-            // await ledger.addVersion({
-            //   componentId: values.component,
-            //   tag: values.tag,
-            // });
+            console.log(componentVersionMap);
+            await props.ledger.addTest({
+              setupId,
+              status,
+              componentVersionMap,
+            });
 
-            // window.location.reload(); // pro react development
+            window.location.reload(); // pro react development
           } catch (e) {
             alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
           } finally {
@@ -89,16 +95,7 @@ function Versions(props: { components: Component[] }) {
       {components.map(component => (
         <div key={component.id}>
           <label htmlFor={`add-test-field-component-${component.id}`}>{component.name}</label>
-          <Field
-            id={`add-test-field-component-${component.id}`}
-            name={`component-${component.id}`}
-            component={SelectFieldAsync(
-              () => {},
-              (x: string) => {
-                return new Promise(res => res([{ value: 'iz', label: 'az' }]));
-              },
-            )}
-          />
+          <Field id={`add-test-field-component-${component.id}`} type="text" name={`component-${component.id}`} placeholder="x.y.z" />
         </div>
       ))}
     </>
