@@ -34,7 +34,7 @@ export type Setup = {
 };
 
 export type RawVersion = {
-  component: string;
+  componentId: string;
   tag: string;
 };
 

@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 import { useEffect, useState } from 'react';
+import { Ledger } from '../../lib/ledger';
 import { LedgerData } from '../../lib/types';
 import connection from '../connection';
 
 export default function () {
   const [data, setData] = useState<LedgerData>();
+  const [ledger, setLedgerInstance] = useState<Ledger>();
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function () {
         const ledger = await connection.getLedgerInstance();
         if (!ledger) return;
         setData((await ledger.fetch())?.data);
+        setLedgerInstance(ledger);
       } catch (e) {
         console.error(e);
       } finally {
@@ -36,5 +39,5 @@ export default function () {
     })();
   }, []);
 
-  return { data, isLoading };
+  return { data, ledger, isLoading };
 }

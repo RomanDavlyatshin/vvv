@@ -17,11 +17,11 @@
 import { FieldProps } from 'formik';
 import React from 'react';
 import Select, * as ReactSelect from 'react-select';
+import useLedgerData from '../../../github/hooks/use-ledger-data';
 
-// TODO fix dirty hacks with cb
 export default (onChangeCb: (...args: any[]) => any): React.SFC<ReactSelect.Props & FieldProps> =>
-  ({ options, field, form }) =>
-    (
+  ({ options, field, form }) => {
+    return (
       <Select
         options={options}
         name={field.name}
@@ -33,3 +33,4 @@ export default (onChangeCb: (...args: any[]) => any): React.SFC<ReactSelect.Prop
         onBlur={field.onBlur}
       />
     );
+  };

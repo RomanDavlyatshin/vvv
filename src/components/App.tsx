@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// import useOctokit from './github/hooks/use-octokit';
-// import useUser from './github/hooks/use-user';
 import useLedgerData from '../github/hooks/use-ledger-data';
 import connection from '../github/connection';
-import FormAddComponent from './forms/add-component';
-import FormAddSetup from './forms/add-setup';
-import FormAddVersion from './forms/add-version';
-import FormAddTest from './forms/add-test';
+
 import Spinner from './spinner';
 import User from './user';
 import Nothing from './placeholder';
 import UpdatedTimer from './refreshed-timer';
+
+import FormAddComponent from './forms/add-component';
+import FormAddSetup from './forms/add-setup';
+import FormAddVersion from './forms/add-version';
+import FormAddTest from './forms/add-test';
 
 function App() {
   return (
@@ -45,60 +45,51 @@ function App() {
 }
 
 function RenderStuff() {
-  const { isLoading, data } = useLedgerData();
-  return (
-    <div className="p-2">
-      {isLoading ? <Spinner>Loading ledger data...</Spinner> : <Ledger data={data} />}
-      <div className="row mt-5">
-        <div className="col-12 col-md-6 col-xl-3">
-          <FormAddComponent />
-        </div>
-        <div className="col-12 col-md-6 col-xl-3">
-          <FormAddSetup />
-        </div>
-        <div className="col-12 col-md-6 col-xl-3">
-          <FormAddVersion />
-        </div>
-        <div className="col-12 col-md-6 col-xl-3">
-          <FormAddTest />
-        </div>
-      </div>
-    </div>
-  );
-}
+  const { isLoading, data, ledger } = useLedgerData();
+  if (isLoading || !ledger) return <Spinner>Loading ledger data...</Spinner>;
 
-function Ledger(props: any) {
-  const data = props.data;
-  console.log('Ledger render', data);
-  if (!data) return <Spinner>No data</Spinner>;
+  if (!data) return <Spinner>ledger.json is not initialized. Make sure to follow setup instructions or contact dev team</Spinner>;
+
   const { components, setups, versions, tests } = data;
   return (
-    <div>
-      <UpdatedTimer />
-      <Stats label="Components" data={components} />
-      <Stats label="Setups" data={setups} />
-      <Stats label="Versions" data={versions} />
-      <Stats label="Tests" data={tests} />
-    </div>
+    <>
+      <div>
+        <UpdatedTimer />
+        <Stats label="Components" data={components} />
+        <Stats label="Setups" data={setups} />
+        <Stats label="Versions" data={versions} keyProp="tag" />
+        <Stats label="Tests" data={tests} />
+      </div>
+      <div className="row mt-5">
+        <div className="col-12 col-md-6 col-xl-3">
+          <FormAddComponent ledger={ledger} data={data} />
+        </div>
+        <div className="col-12 col-md-6 col-xl-3">
+          <FormAddSetup ledger={ledger} data={data} />
+        </div>
+        <div className="col-12 col-md-6 col-xl-3">
+          <FormAddVersion ledger={ledger} data={data} />
+        </div>
+        <div className="col-12 col-md-6 col-xl-3">
+          <FormAddTest ledger={ledger} data={data} />
+        </div>
+      </div>
+    </>
   );
 }
 
 function Stats(props: any) {
+  const { label, data, keyProp = 'id' } = props;
   return (
-    <div style={{}}>
-      <h3>{props.label}</h3>
-      <div>{Array.isArray(props.data) ? props.data.map((x: any) => renderStat(x)) : '...'}</div>
+    <div>
+      <h3>{label}</h3>
+      <div>{Array.isArray(data) ? data.map((x: any) => renderStat(x[keyProp], x)) : '...'}</div>
     </div>
   );
 }
 
-function renderStat(z: any) {
-  return (
-    <div key={z.id}>
-      {z.name}
-      {z.id && `: ${z.id}`}
-    </div>
-  );
+function renderStat(key: string, data: any) {
+  return <div key={key}>{JSON.stringify(data)}</div>;
 }
 
 export default App;

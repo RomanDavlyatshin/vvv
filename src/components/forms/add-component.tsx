@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import connection from '../../github/connection';
+import { Ledger } from '../../lib/ledger';
+import { LedgerData } from '../../lib/types';
 
-export default () => (
+export default (props: { ledger: Ledger; data: LedgerData }) => (
   <Formik
     initialValues={{ id: '', name: '' }}
     onSubmit={async (values, { setSubmitting }) => {
       try {
-        const ledger = await connection.getLedgerInstance();
-        if (!ledger) return;
-        await ledger.addComponent(values);
+        await props.ledger.addComponent(values);
         window.location.reload(); // pro react development
       } catch (e) {
         alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));

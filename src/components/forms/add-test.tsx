@@ -17,88 +17,106 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import SelectField from './generic/select-field';
 import useLedgerData from '../../github/hooks/use-ledger-data';
 import Spinner from '../spinner';
-import { Component, RawTestResult } from '../../lib/types';
+import { Component, LedgerData } from '../../lib/types';
 import { useState } from 'react';
+import connection from '../../github/connection';
+import SelectFieldAsync from './generic/__select-field-async';
+import { Ledger } from '../../lib/ledger';
 
-export default () => {
+export default (props: { ledger: Ledger; data: LedgerData }) => {
+  if (!Array.isArray(props.data.setups) || props.data.setups.length === 0) {
+    return <Spinner>No available setups. Create setups first</Spinner>;
+  }
+  const setups = props.data.setups.map(x => ({ value: x.id, label: x.name }));
+  const [components, setComponents] = useState<Component[]>([]);
   return (
     <>
       <h3>New test result</h3>
-      <RenderStuff />
+      <Formik
+        initialValues={{ setupId: '', status: '' }}
+        onSubmit={async (values, { setSubmitting }) => {
+          try {
+            console.log(values);
+            // const ledger = await connection.getLedgerInstance();
+            // if (!ledger) return;
+
+            // await ledger.addVersion({
+            //   componentId: values.component,
+            //   tag: values.tag,
+            // });
+
+            // window.location.reload(); // pro react development
+          } catch (e) {
+            alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+      >
+        {({ isSubmitting }) => (
+          <Form>
+            <label htmlFor="add-test-field-setup-id">Setup</label>
+            <Field
+              id="add-test-field-setup-id"
+              name={'setupId'}
+              component={SelectField(async (setupId: string, form) => {
+                const ledger = await connection.getLedgerInstance();
+                if (!ledger) return;
+                const components = await ledger.getSetupComponents(setupId);
+                setComponents(components);
+              })}
+              options={setups}
+            />
+            <ErrorMessage name="setupId" component="div" />
+
+            <label htmlFor="add-test-field-status">Status</label>
+            <Field id="add-component-field-status" type="text" name="status" />
+            <ErrorMessage name="status" component="div" />
+
+            <label htmlFor="add-test-field-status">Component Versions</label>
+            {/* {!Array.isArray(components) || components.length === 0 ? (
+            <Spinner>...select setup first</Spinner>
+          ) : (
+            components.map(component => (
+              <>
+                <label htmlFor={`add-test-field-component-${component.id}`}>{component.name}</label>
+                <Field id={`add-test-field-component-${component.id}`} name={`component-${component.id}`} />
+              </>
+            ))
+          )} */}
+            <Versions components={components} />
+            <button type="submit" disabled={isSubmitting}>
+              Submit
+            </button>
+            {isSubmitting && <div>submitting...</div>}
+          </Form>
+        )}
+      </Formik>
     </>
   );
 };
 
-function RenderStuff() {
-  const { isLoading, data } = useLedgerData();
-  if (isLoading) return <Spinner>Loading available setups...</Spinner>;
-
-  if (!data) return <Spinner>No data. Contact dev team</Spinner>;
-
-  if (!Array.isArray(data.setups) || data.setups.length === 0) {
-    return <Spinner>No available setups. Create setups first</Spinner>;
-  }
-
-  return <RenderForm setups={data.setups} />;
-}
-
-function RenderForm(props: { setups: Record<string, any>[] }) {
-  const setups = props.setups.map(x => ({ value: x.id, label: x.name }));
-  const [components, setComponents] = useState<Component[]>([]);
+function Versions(props: { components: Component[] }) {
+  const components = props.components;
+  if (!Array.isArray(components) || components.length === 0) return <Spinner>...select setup first</Spinner>;
   return (
-    <Formik
-      initialValues={{ setupId: '', status: '', componentVersions: '' }}
-      onSubmit={async (values, { setSubmitting }) => {
-        try {
-          console.log(values);
-          // const ledger = await connection.getLedgerInstance();
-          // if (!ledger) return;
-
-          // await ledger.addVersion({
-          //   component: values.component,
-          //   tag: values.tag,
-          // });
-
-          // window.location.reload(); // pro react development
-        } catch (e) {
-          alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
-        } finally {
-          setSubmitting(false);
-        }
-      }}
-    >
-      {({ isSubmitting }) => (
-        <Form>
-          <label htmlFor="add-test-field-setup-id">Setup</label>
-          <Field id="add-test-field-setup-id" name={'setup'} component={SelectField(() => {})} options={setups} />
-          <ErrorMessage name="component-id" component="div" />
-
-          <label htmlFor="add-test-field-status">Status</label>
-          <Field id="add-component-field-status" type="text" name="status" />
-          <ErrorMessage name="status" component="div" />
-
-          <label htmlFor="add-test-field-status">Component Versions</label>
-          {!Array.isArray(components) || components.length === 0 ? (
-            <Spinner>...select setup first</Spinner>
-          ) : (
-            components.map(x => (
-              <div>
-                {x.name} - {x.id}
-              </div>
-            ))
-          )}
-          {/* 
-          <Field id="add-component-field-status" type="text" name="status" />
-          <ErrorMessage name="status" component="div" /> */}
-
-          {/* {components.map(x => )} */}
-
-          <button type="submit" disabled={isSubmitting}>
-            Submit
-          </button>
-          {isSubmitting && <div>submitting...</div>}
-        </Form>
-      )}
-    </Formik>
+    <>
+      {components.map(component => (
+        <>
+          <label htmlFor={`add-test-field-component-${component.id}`}>{component.name}</label>
+          <Field
+            id={`add-test-field-component-${component.id}`}
+            name={`component-${component.id}`}
+            component={SelectFieldAsync(
+              () => {},
+              (x: string) => {
+                debugger;
+                return new Promise(res => res([{ value: 'iz', label: 'az' }]));
+              },
+            )}
+          />
+        </>
+      ))}
+    </>
   );
 }

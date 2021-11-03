@@ -16,20 +16,29 @@
 // credits to https://gist.github.com/hubgit/e394e9be07d95cd5e774989178139ae8
 import { FieldProps } from 'formik';
 import React from 'react';
-import Select, * as ReactSelect from 'react-select';
+import * as ReactSelect from 'react-select';
+import AsyncSelect from 'react-select/async';
 
 // TODO fix dirty hacks with cb
-export default (onChangeCb: (...args: any[]) => any): React.SFC<ReactSelect.Props & FieldProps> =>
+/* eslint-disable @typescript-eslint/indent */
+export default (
+    onChangeCb: (...args: any[]) => any,
+    loadOptions: (inputValue: string) => Promise<any>,
+  ): React.SFC<ReactSelect.Props & FieldProps> =>
   ({ options, field, form }) =>
     (
-      <Select
-        options={options}
-        name={field.name}
-        value={options ? options.find((x: any) => x.value === field.value) : ''}
+      <AsyncSelect
+        loadOptions={loadOptions}
+        // defaultOptions
+        defaultOptions
+        cacheOptions
+        // name={field.name}
+        // value={options ? options.find((x: any) => x.value === field.value) : ''}
         onChange={(option: any) => {
+          debugger;
           form.setFieldValue(field.name, option.value);
           onChangeCb(option.value, form);
         }}
-        onBlur={field.onBlur}
+        // onBlur={field.onBlur}
       />
     );

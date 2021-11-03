@@ -20,6 +20,7 @@
 // await ledger.load();
 
 import { Octokit } from '@octokit/core';
+import semver from 'semver';
 import { LedgerRepoOptions, LedgerData, Setup, RawVersion, RawTestResult, Component } from './types';
 import { b64_to_utf8, utf8_to_b64 } from './util';
 import dayjs from 'dayjs';
@@ -126,7 +127,7 @@ export class Ledger {
       this.data.setups
         .map(x => x.componentIds)
         .map(getComponentsHash)
-        .findIndex(hash => hash === newHash) === -1;
+        .findIndex(x => x === newHash) === -1;
 
     if (!isUnique) {
       throw new Error('Setup with the same list of components already exist');
@@ -140,21 +141,10 @@ export class Ledger {
 
     const data = {
       ...rawSetupData,
-      components: rawSetupData.componentIds.sort(),
+      componentIds: rawSetupData.componentIds.sort(),
     };
 
     await this.addTo('setups', data);
-  }
-
-  // TODO deal with polymorphic function signature phobia
-  private isComponentExists(id: string, name?: string) {
-    if (!this.data) throw new Error('no data'); // FIXME
-
-    if (name) {
-      return this.data.components.findIndex(x => x.id === id && x.name === name) > -1;
-    }
-
-    return this.data.components.findIndex(x => x.id === id) > -1;
   }
 
   public async addVersion(data: RawVersion) {
@@ -162,31 +152,44 @@ export class Ledger {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
-    const { component, tag } = data;
-    if (!this.isComponentExists(component)) {
-      const msg = `Component with id ${component} doesn't exists, but it will be added automatically. Later, you can edit it's parameters manually`;
-      this.isCli ? console.warn(msg) : alert(msg);
-      await this.addComponent({ id: component, name: component });
+    const { componentId, tag } = data;
+    if (!this.isComponentExists(componentId)) {
+      throw new Error(`Component with id "${componentId}" does not exist`);
+      // const msg = `Component with id ${componentId} does not exist, but it will be added automatically. Later, you can edit it's parameters manually`;
+      // this.warning(msg);
+      // await this.addComponent({ id: componentId, name: componentId });
     }
 
-    const existingVersion = this.findComponentVersion(component, tag);
+    const existingVersion = this.findComponentVersion(componentId, tag);
     if (existingVersion) {
       const msg = `
-      Version ${component}:${tag} already exists.
+      Version ${componentId}:${tag} already exists.
       It was created at ${dayjs(existingVersion.date).format('DD/MM/YY hh:mm:ss')}.
       Duplicate version will be added and take priority over the previous one.
       But you will still able to see it in the version table.
     `;
-      this.isCli ? console.warn(msg) : alert(msg);
+      this.warning(msg);
     }
 
-    await this.addTo('versions', { date: Date.now(), component, tag });
+    await this.addTo('versions', { date: Date.now(), componentId, tag });
   }
 
-  public async getLatestComponentVersion(componentId: string) {
+  public getLatestComponentVersion(componentId: string) {
     if (!this.data) throw new Error('no data'); // FIXME
-    // TODO sort
-    return this.data.versions.find(version => version.component === componentId);
+    return this.data.versions.filter(x => x.componentId === componentId).sort((a, b) => semver.compare(b.tag, a.tag))[0];
+  }
+
+  public getSetupComponents(setupId: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+    const setup = this.data.setups.find(x => x.id === setupId);
+    if (!setup) {
+      throw new Error(`setup with id "${setupId}" is not found`);
+    }
+    const components = this.data.components.filter(x => setup.componentIds.includes(x.id));
+    if (components.length === 0) {
+      this.warning(`getSetupComponents(): setup ${setupId} appears to have no components`);
+    }
+    return components;
   }
 
   public async addTest(data: RawTestResult) {
@@ -195,12 +198,12 @@ export class Ledger {
     }
 
     // existing setup
-    const isSetupExists = this.data.setups.findIndex(setup => setup.id === data.setupId) > -1;
+    const isSetupExists = this.data.setups.findIndex(x => x.id === data.setupId) > -1;
     if (!isSetupExists) {
       const msg = `Setup with id ${data.setupId} doesn't exists.
       Test result will be saved, but will only be visible in raw tests data table.
       Make sure to add ${data.setupId} to setups list.`;
-      this.isCli ? console.warn(msg) : alert(msg);
+      this.warning(msg);
     }
 
     // non-empty status
@@ -219,7 +222,7 @@ export class Ledger {
     }
     if (errorMsg) {
       errorMsg += `Test result will be saved, but make sure to add these versions`;
-      this.isCli ? console.warn(errorMsg) : alert(errorMsg);
+      this.warning(errorMsg);
     }
 
     await this.addTo('tests', {
@@ -238,12 +241,24 @@ export class Ledger {
     );
   }
 
-  private findComponentVersion(component: string, versionTag: string) {
+  private findComponentVersion(componentId: string, versionTag: string) {
     if (!this.data) throw new Error('no data'); // FIXME
-    const componentVersions = this.data.versions.filter(version => version.component === component);
-    const existingVersion = componentVersions.find(version => version.tag === versionTag);
+    const componentVersions = this.data.versions.filter(x => x.componentId === componentId);
+    const existingVersion = componentVersions.find(x => x.tag === versionTag);
     return existingVersion;
   }
+
+  // TODO deal with polymorphic function signature phobia
+  private isComponentExists(id: string, name?: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+
+    if (name) {
+      return this.data.components.findIndex(x => x.id === id && x.name === name) > -1;
+    }
+
+    return this.data.components.findIndex(x => x.id === id) > -1;
+  }
+
   private async addTo(property: string, value: any, message = 'by Drill4J@VVVBot') {
     const newData = {
       ...this.data,
@@ -282,6 +297,11 @@ export class Ledger {
 
   private serialize(data: LedgerData): string {
     return utf8_to_b64(JSON.stringify(data));
+  }
+
+  private warning(msg: string) {
+    this.isCli ? console.warn(msg) : alert(msg);
+    return;
   }
 
   // private test() {
