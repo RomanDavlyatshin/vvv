@@ -36,8 +36,6 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
         onSubmit={async (values, { setSubmitting }) => {
           try {
             console.log(values);
-            // const ledger = await connection.getLedgerInstance();
-            // if (!ledger) return;
 
             // await ledger.addVersion({
             //   componentId: values.component,
@@ -73,16 +71,6 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
             <ErrorMessage name="status" component="div" />
 
             <label htmlFor="add-test-field-status">Component Versions</label>
-            {/* {!Array.isArray(components) || components.length === 0 ? (
-            <Spinner>...select setup first</Spinner>
-          ) : (
-            components.map(component => (
-              <>
-                <label htmlFor={`add-test-field-component-${component.id}`}>{component.name}</label>
-                <Field id={`add-test-field-component-${component.id}`} name={`component-${component.id}`} />
-              </>
-            ))
-          )} */}
             <Versions components={components} />
             <button type="submit" disabled={isSubmitting}>
               Submit
@@ -101,7 +89,7 @@ function Versions(props: { components: Component[] }) {
   return (
     <>
       {components.map(component => (
-        <>
+        <div key={component.id}>
           <label htmlFor={`add-test-field-component-${component.id}`}>{component.name}</label>
           <Field
             id={`add-test-field-component-${component.id}`}
@@ -109,12 +97,11 @@ function Versions(props: { components: Component[] }) {
             component={SelectFieldAsync(
               () => {},
               (x: string) => {
-                debugger;
                 return new Promise(res => res([{ value: 'iz', label: 'az' }]));
               },
             )}
           />
-        </>
+        </div>
       ))}
     </>
   );
