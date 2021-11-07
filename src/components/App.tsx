@@ -19,12 +19,13 @@ import connection from '../github/connection';
 import Spinner from './spinner';
 import User from './user';
 import Nothing from './placeholder';
-import UpdatedTimer from './refreshed-timer';
 
 import FormAddComponent from './forms/add-component';
 import FormAddSetup from './forms/add-setup';
 import FormAddVersion from './forms/add-version';
 import FormAddTest from './forms/add-test';
+import VersionTable from './tables/version';
+import ElapsedTimer from './elapsed-timer';
 
 function App() {
   return (
@@ -52,14 +53,17 @@ function RenderStuff() {
 
   const { components, setups, versions, tests } = data;
   return (
-    <>
+    <div className="px-2">
       <div>
-        <UpdatedTimer />
+        <div>
+          Refreshed <ElapsedTimer />
+        </div>
         <Stats label="Components" data={components} />
         <Stats label="Setups" data={setups} />
-        <Stats label="Versions" data={versions} keyProp="tag" />
-        <Stats label="Tests" data={tests} />
+        <Stats label="Versions" data={versions} keyProp="date" />
+        <Stats label="Tests" data={tests} keyProp="date" />
       </div>
+      <VersionTable versions={data.versions} components={data.components} />
       <div className="row mt-5">
         <div className="col-12 col-md-6 col-xl-3">
           <FormAddComponent ledger={ledger} data={data} />
@@ -74,7 +78,7 @@ function RenderStuff() {
           <FormAddTest ledger={ledger} data={data} />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -83,13 +87,13 @@ function Stats(props: any) {
   return (
     <div>
       <h3>{label}</h3>
-      <div>{Array.isArray(data) ? data.map((x: any) => renderStat(x[keyProp], x)) : '...'}</div>
+      <div>[{Array.isArray(data) ? data.map((x: any) => renderStat(x[keyProp], x)) : '...'}]</div>
     </div>
   );
 }
 
 function renderStat(key: string, data: any) {
-  return <div key={key}>{JSON.stringify(data)}</div>;
+  return <div key={key}>{JSON.stringify(data)},</div>;
 }
 
 export default App;

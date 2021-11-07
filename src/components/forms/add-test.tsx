@@ -20,6 +20,7 @@ import { Component, LedgerData } from '../../lib/types';
 import { useState } from 'react';
 import { Ledger } from '../../lib/ledger';
 import { startsWith, stripPrefix } from './util';
+import Question from '../Question';
 
 export default (props: { ledger: Ledger; data: LedgerData }) => {
   if (!Array.isArray(props.data.setups) || props.data.setups.length === 0) {
@@ -83,6 +84,10 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
           </Form>
         )}
       </Formik>
+      <Question>
+        <span>IDEA: Allow to configure hook on test result submission</span>
+        <span>| {'e.g. if (test.status === "failed") req.("POST our.mail.proxy/?recipients={setup.maintainers}", test)'}</span>
+      </Question>
     </>
   );
 };

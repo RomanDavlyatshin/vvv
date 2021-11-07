@@ -13,26 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import { useState, useEffect } from 'react';
+import styled from 'styled-components';
 
-dayjs.extend(relativeTime);
+const Styled = styled.div`
+  color: rgba(255, 91, 205, 0.5);
+`;
 
-export default function RefreshedTimer(props: any) {
-  const [elapsedStr, setElapsedStr] = useState('now');
-  const updateFrequency = 1000 * 10;
-
-  useEffect(() => {
-    const start = dayjs();
-    setInterval(() => {
-      setElapsedStr(start.fromNow());
-    }, updateFrequency);
-  }, [updateFrequency]);
-
-  return (
-    <div>
-      Refreshed <span style={{ color: 'rgb(226,180,128)' }}>{elapsedStr}</span>
-    </div>
-  );
+export default function Question(props: any) {
+  return <Styled>{props.children}</Styled>;
 }
