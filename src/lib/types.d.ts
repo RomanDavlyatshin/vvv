@@ -46,6 +46,7 @@ export type RawTestResult = {
   setupId: string;
   status: string;
   componentVersionMap: Record<string, string>;
+  description?: string;
 };
 
 export type TestResult = RawTestResult & {

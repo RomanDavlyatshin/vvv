@@ -192,6 +192,11 @@ export class Ledger {
     return components;
   }
 
+  public getSetupTests(setupId: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+    return this.data.tests.filter(x => x.setupId === setupId);
+  }
+
   public async addTest(data: RawTestResult) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);

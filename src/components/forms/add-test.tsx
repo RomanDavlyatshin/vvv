@@ -42,7 +42,6 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
                 return a;
               }, {});
 
-            console.log(componentVersionMap);
             await props.ledger.addTest({
               setupId,
               status,
@@ -85,7 +84,11 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
         )}
       </Formik>
       <Question>
-        <span>IDEA: Allow to configure hook on test result submission</span>
+        <span>IDEA #1: Component version picker</span>
+      </Question>
+      <Question>
+        <span>IDEA #2: Allow to configure hook on test result submission</span>
+        <br />
         <span>| {'e.g. if (test.status === "failed") req.("POST our.mail.proxy/?recipients={setup.maintainers}", test)'}</span>
       </Question>
     </>

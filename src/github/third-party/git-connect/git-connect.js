@@ -35,7 +35,7 @@ export default function connect(config) {
       connection.config['proxy'] + '/github_access_token?code=' + code + '&client_id=' + connection.config['client_id'],
       function (error, data) {
         if (error) {
-          console.log(error);
+          console.log(error); // FIXME ? document.dispatchEvent(new CustomEvent('FailedToConnectToGithubEvent', { detail: error }))
           return;
         }
         if (data.error) {

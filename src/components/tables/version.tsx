@@ -19,28 +19,11 @@ import { useTable } from 'react-table';
 import ElapsedTimer from '../elapsed-timer';
 import { Component, Version } from '../../lib/types';
 import Question from '../Question';
+import { C, L } from '../styles';
 
 interface ColumnDetails {
   [key: string]: unknown;
 }
-
-const C = {
-  white: 'rgb(204, 204, 204)',
-  shade1: `rgb(60, 60, 60)`,
-  shade2: `rgb(45, 45, 45)`,
-  shade3: `rgb(30, 30, 30)`,
-
-  green: `rgb(106, 138, 85)`,
-
-  blue1: `rgb(59 75 86)`,
-  blue2: `rgb(61 100 126)`,
-  blue3: `rgb(14 99 156)`,
-};
-
-const L = {
-  paddingSm: `7px`,
-  paddingMd: `15px`,
-};
 
 const S = {
   td: styled.td`
@@ -99,6 +82,15 @@ export default function VersionTable(props: VersionTableProps) {
   );
 
   const tableInstance = useTable({ columns, data });
+
+  // FIXME useMemo gets called in vain
+  if (components.length === 0) {
+    return <div>no components</div>;
+  }
+  if (versions.length === 0) {
+    return <div>no versions</div>;
+  }
+
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = tableInstance;
 
   return (

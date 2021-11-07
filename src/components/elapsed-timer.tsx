@@ -16,13 +16,13 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useState, useEffect } from 'react';
+import { C } from './styles';
 
 dayjs.extend(relativeTime);
 
 export default function ElapsedTimer({ start = Date.now(), updateFrequency = 1000 * 10 }: ElapsedProps) {
-  console.log('use elapsed', start === Date.now());
   const elapsed = useElapsed({ start, updateFrequency });
-  return <span style={{ color: 'rgb(226,180,128)' }}>{elapsed}</span>;
+  return <span style={{ color: C.yellow }}>{elapsed}</span>;
 }
 
 export function useElapsed({ start, updateFrequency }: ElapsedProps) {
@@ -32,7 +32,7 @@ export function useElapsed({ start, updateFrequency }: ElapsedProps) {
     setInterval(() => {
       setElapsedStr(s.fromNow());
     }, updateFrequency);
-  }, [updateFrequency, start, s]);
+  }, [updateFrequency]);
   // FIXME passing start is kinda hack-ish, but I'm unsure about passing "s" as it's the instance of dayjs
 
   return elapsedStr;

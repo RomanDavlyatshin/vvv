@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import styled from 'styled-components';
+
 import useLedgerData from '../github/hooks/use-ledger-data';
 import connection from '../github/connection';
 
@@ -26,6 +28,10 @@ import FormAddVersion from './forms/add-version';
 import FormAddTest from './forms/add-test';
 import VersionTable from './tables/version';
 import ElapsedTimer from './elapsed-timer';
+import SetupTestsTable from './tables/setup-tests';
+import { C } from './styles';
+import { LedgerData } from '../lib/types';
+import NoRender from './no-render';
 
 function App() {
   return (
@@ -55,15 +61,30 @@ function RenderStuff() {
   return (
     <div className="px-2">
       <div>
-        <div>
-          Refreshed <ElapsedTimer />
-        </div>
-        <Stats label="Components" data={components} />
-        <Stats label="Setups" data={setups} />
-        <Stats label="Versions" data={versions} keyProp="date" />
-        <Stats label="Tests" data={tests} keyProp="date" />
+        Refreshed <ElapsedTimer />
       </div>
+      <JSONDataStyled.wrapper>
+        <NoRender label="Debug Data">
+          <JSONData data={data} />
+        </NoRender>
+      </JSONDataStyled.wrapper>
+      {/*SETUPS  */}
+      <h3 className="mt-3">SETUPS</h3>
+      {data.setups.map(setup => {
+        const setupTests = ledger.getSetupTests(setup.id);
+        // const setupComponents = ledger.getSetupComponents(setup.id);
+        return (
+          <div key={setup.id}>
+            <h5>{setup.name}</h5>
+            {setupTests.length === 0 ? <div>no tests</div> : <SetupTestsTable setup={setup} tests={setupTests} />}
+          </div>
+        );
+      })}
+
+      <h3 className="mt-3">VERSIONS</h3>
       <VersionTable versions={data.versions} components={data.components} />
+
+      {/*FORMS  */}
       <div className="row mt-5">
         <div className="col-12 col-md-6 col-xl-3">
           <FormAddComponent ledger={ledger} data={data} />
@@ -82,11 +103,32 @@ function RenderStuff() {
   );
 }
 
+const JSONDataStyled = {
+  wrapper: styled.div`
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: ${C.green}
+    font-size: 12px;
+    text-align: right;
+    background-color: rgba(0, 0, 0, 0.2);
+  `,
+};
+function JSONData({ data }: { data: LedgerData }) {
+  return (
+    <div>
+      <Stats label="Components" data={data.components} />
+      <Stats label="Setups" data={data.setups} />
+      <Stats label="Versions" data={data.versions} keyProp="date" />
+      <Stats label="Tests" data={data.tests} keyProp="date" />
+    </div>
+  );
+}
 function Stats(props: any) {
   const { label, data, keyProp = 'id' } = props;
   return (
     <div>
-      <h3>{label}</h3>
+      <span>{label}</span>
       <div>[{Array.isArray(data) ? data.map((x: any) => renderStat(x[keyProp], x)) : '...'}]</div>
     </div>
   );
