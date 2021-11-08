@@ -69,16 +69,17 @@ function RenderStuff() {
       </JSONDataStyled>
       {/*SETUPS  */}
       <h3 className="mt-3">SETUPS</h3>
-      {data.setups.map(setup => {
-        const setupTests = ledger.getSetupTests(setup.id);
-        // const setupComponents = ledger.getSetupComponents(setup.id);
-        return (
-          <div key={setup.id}>
-            <h5>{setup.name}</h5>
-            {setupTests.length === 0 ? <div>no tests</div> : <SetupTestsTable setup={setup} tests={setupTests} />}
-          </div>
-        );
-      })}
+      <div className="row">
+        {data.setups.map(setup => {
+          const setupTests = ledger.getSetupTests(setup.id);
+          return (
+            <div className="col-12 col-md-6 col-xl-3 mb-3" key={setup.id}>
+              <h5>{setup.name}</h5>
+              <SetupTestsTable setup={setup} tests={setupTests} />
+            </div>
+          );
+        })}
+      </div>
 
       <h3 className="mt-3">VERSIONS</h3>
       <VersionTable versions={data.versions} components={data.components} />
@@ -103,36 +104,46 @@ function RenderStuff() {
 }
 
 const JSONDataStyled = styled.div`
-    position: absolute;
-    top: 0;
-    right: 0;
-    color: ${C.green}
-    font-size: 12px;
-    text-align: right;
-    background-color: rgba(0, 0, 0, 0.2);
-  `;
+  position: fixed;
+  top: 0;
+  right: 0;
+  font-size: 12px;
+  background-color: rgb(0, 0, 0);
+`;
 function JSONData({ data }: { data: LedgerData }) {
   return (
-    <div>
-      <Stats label="Components" data={data.components} />
-      <Stats label="Setups" data={data.setups} />
-      <Stats label="Versions" data={data.versions} keyProp="date" />
-      <Stats label="Tests" data={data.tests} keyProp="date" />
+    <div className="row">
+      <div className="col-3">
+        <div>Components</div>
+        <Stats label="Components" data={data.components} />
+      </div>
+      <div className="col-3">
+        <div>Setups</div>
+        <Stats label="Setups" data={data.setups} />
+      </div>
+      <div className="col-3">
+        <div>Versions</div>
+        <Stats label="Versions" data={data.versions} keyProp="date" />
+      </div>
+      <div className="col-3">
+        <div>Tests</div>
+        <Stats label="Tests" data={data.tests} keyProp="date" />
+      </div>
     </div>
   );
 }
 function Stats(props: any) {
-  const { label, data, keyProp = 'id' } = props;
-  return (
-    <div>
-      <span>{label}</span>
-      <div>[{Array.isArray(data) ? data.map((x: any) => renderStat(x[keyProp], x)) : '...'}]</div>
-    </div>
-  );
+  const { data, keyProp = 'id' } = props;
+  if (!Array.isArray(data)) return <>{'...'}</>;
+  return <div>{data.map((x: any) => renderStat(x[keyProp], x))}</div>;
 }
 
 function renderStat(key: string, data: any) {
-  return <div key={key}>{JSON.stringify(data)},</div>;
+  return (
+    <div className="mb-2" key={key}>
+      {JSON.stringify(data)},
+    </div>
+  );
 }
 
 export default App;

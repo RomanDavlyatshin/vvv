@@ -1,40 +1,43 @@
+Validate "New test result" for exhaustive list of setup's component versions
+add "type" to test result?
+with arbitrary string, e.g. "e2e UI", "manual" etc
+
+editing fields
+
 CI
-    add version
-    add test result
+add version
+add test result
 
 Manual
-    add component
-    add version
-    add setup
-    add test result
+add component
+add version
+add setup
+add test result
 
+CHALLENGES
+lots of components ( > 10 updated on frequent basis)
 
-CHALLENGES 
-    lots of components ( > 10 updated on frequent basis)
-    
     hard to keep track of
         - existing versions
         - compatibility/breaking changes
         - existing deployment variations
-    
+
     no automated tests -> hard to check what is broken -> troubleshooting is a pain (what/where is broken)
 
 SOLUTIONS?
-    manual tracking with xlsx spreadsheet
+manual tracking with xlsx spreadsheet
 
-CONS:
-    - prone to human error (easy to forget, make mistakes)
-    - VBA automation - does not work in web -> hard to share/collaborate
+CONS: - prone to human error (easy to forget, make mistakes) - VBA automation - does not work in web -> hard to share/collaborate
 
 WHAT WE'RE AIMING FOR
-    e2e automated smoke for basic setups
-        single java agent
-        microservice java agent
-        js agent
-        ...etc
-    
+e2e automated smoke for basic setups
+single java agent
+microservice java agent
+js agent
+...etc
+
     automated tracking of
-        existing set of components  
+        existing set of components
         latest versions
         various setups
         various test results
@@ -43,10 +46,10 @@ WHAT WE'RE AIMING FOR
         who authored changes
 
 IMPLEMENTATION
-    Use GitHub repository as a storage. Why?
-        no hosting required
-        publicly available
-        built-in history & authentication
+Use GitHub repository as a storage. Why?
+no hosting required
+publicly available
+built-in history & authentication
 
     Implement lightweight wrapper to CRUD components/versions/tests/setups
 
@@ -55,15 +58,15 @@ IMPLEMENTATION
         Manual testing status update
             UI hosted on Github Pages
             _almost_ no backend required (sans GitHub OAuth proxy)
-    
+
     Integrate with our CI/CD
         "perfect world"
         check each setup if dependant component changed
         record results
 
 PROS:
-    info on versions is centralized, publicly available and auto-updated
-    
+info on versions is centralized, publicly available and auto-updated
+
     expandable ->
         utilize versions data to implement .sh scripts to ease deployment
         ("one-click" deployment of various setups (where it's possible/reasonable))

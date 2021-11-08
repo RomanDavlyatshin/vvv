@@ -21,7 +21,7 @@
 
 import { Octokit } from '@octokit/core';
 import semver from 'semver';
-import { LedgerRepoOptions, LedgerData, Setup, RawVersion, RawTestResult, Component } from './types';
+import { LedgerRepoOptions, LedgerData, Setup, RawVersion, RawTestResult, Component, Version } from './types';
 import { b64_to_utf8, utf8_to_b64 } from './util';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -57,6 +57,7 @@ export class Ledger {
 
   private isCli: boolean;
 
+  // PREPARE/ GH INTERFACING
   constructor(options: LedgerConstructorOptions) {
     const { octokitAuthToken, ledgerRepo, isCli = true } = options;
     this.auth = octokitAuthToken;
@@ -87,6 +88,47 @@ export class Ledger {
     return this;
   }
 
+  private async addTo(property: string, value: any) {
+    const newData = {
+      ...this.data,
+      [property]: [...(this.data as any)[property], value],
+    };
+
+    const response = await (this.octokit as any).request(
+      `PUT /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
+      {
+        message: `new ${property}`,
+        content: this.serialize(newData as any),
+        sha: this.sha,
+      },
+    );
+    if (response.status !== 200) {
+      throw new Error(`Failed to update ledger data: ${response.data.error}`);
+    }
+
+    const check = await (this.octokit as any).request(
+      `GET /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
+    );
+
+    (this.data as any) = newData;
+    this.sha = response.data.content.sha;
+
+    if (this.sha !== check.data.sha) {
+      const msg = 'CRITICAL ERROR: post-update SHA check failed. Open development console, copy error log and contact the development team';
+      console.error(msg, '\n', 'response data', '\n', response, '\n', 'check data', '\n', check, '\n', '---CRITICAL ERROR LOG END---');
+      throw new Error(msg);
+    }
+  }
+
+  private deserialize(rawData: any): LedgerData {
+    return JSON.parse(b64_to_utf8(rawData));
+  }
+
+  private serialize(data: LedgerData): string {
+    return utf8_to_b64(JSON.stringify(data));
+  }
+
+  // CREATE
   public async addComponent(data: Component) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
@@ -174,9 +216,67 @@ export class Ledger {
     await this.addTo('versions', { date: Date.now(), componentId, tag });
   }
 
+  public async addTest(data: RawTestResult) {
+    if (!this.checkData(this.data)) {
+      throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
+    }
+
+    // existing setup
+    const isSetupExists = this.data.setups.findIndex(x => x.id === data.setupId) > -1;
+    if (!isSetupExists) {
+      const msg = `Setup with id ${data.setupId} doesn't exists.
+      Test result will be saved, but will only be visible in raw tests data table.
+      Make sure to add ${data.setupId} to setups list.`;
+      this.warning(msg);
+    }
+
+    // non-empty status
+    if (!data.status || typeof data.status !== 'string') {
+      throw new Error('Test result must contain non-empty status string');
+    }
+
+    throw new Error('CHECK ALL COPONENTS');
+    if (Object.keys(data.componentVersionMap).length === 0) {
+      throw new Error('Please, specify component versions');
+    }
+
+    // existing component versions
+    let errorMsg = '';
+    for (const componentId in data.componentVersionMap) {
+      const versionTag = data.componentVersionMap[componentId];
+      const version = this.findComponentVersion(componentId, versionTag);
+      if (!version) {
+        errorMsg = `${componentId}:${versionTag} does not exists!\n`;
+      }
+    }
+    if (errorMsg) {
+      errorMsg += `Test result will be saved, but make sure to add these versions`;
+      this.warning(errorMsg);
+    }
+
+    await this.addTo('tests', {
+      date: Date.now(),
+      ...data,
+    });
+  }
+
+  // GET
   public getLatestComponentVersion(componentId: string) {
     if (!this.data) throw new Error('no data'); // FIXME
     return this.data.versions.filter(x => x.componentId === componentId).sort((a, b) => semver.compare(b.tag, a.tag))[0];
+  }
+
+  public getLatests(setupId?: string): Version[] {
+    if (!this.data) throw new Error('no data'); // FIXME
+
+    if (setupId) {
+      const setup = this.data.setups.find(x => setupId === x.id);
+      if (!setup) {
+        throw new Error('CRITICAL ERROR: setup with ID not found. Normally, this should not happen. Please contact the development team');
+      }
+      return setup.componentIds.map(this.getLatestComponentVersion);
+    }
+    return this.data.components.map(x => x.id).map(this.getLatestComponentVersion);
   }
 
   public getSetupComponents(setupId: string) {
@@ -197,45 +297,14 @@ export class Ledger {
     return this.data.tests.filter(x => x.setupId === setupId);
   }
 
-  public async addTest(data: RawTestResult) {
-    if (!this.checkData(this.data)) {
-      throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
-    }
-
-    // existing setup
-    const isSetupExists = this.data.setups.findIndex(x => x.id === data.setupId) > -1;
-    if (!isSetupExists) {
-      const msg = `Setup with id ${data.setupId} doesn't exists.
-      Test result will be saved, but will only be visible in raw tests data table.
-      Make sure to add ${data.setupId} to setups list.`;
-      this.warning(msg);
-    }
-
-    // non-empty status
-    if (!data.status || typeof data.status !== 'string') {
-      throw new Error('Test result must contain non-empty status string');
-    }
-
-    // existing component versions
-    let errorMsg = '';
-    for (const component in data.componentVersionMap) {
-      const versionTag = data.componentVersionMap[component];
-      const version = this.findComponentVersion(component, versionTag);
-      if (!version) {
-        errorMsg = `${component}:${versionTag} does not exists!\n`;
-      }
-    }
-    if (errorMsg) {
-      errorMsg += `Test result will be saved, but make sure to add these versions`;
-      this.warning(errorMsg);
-    }
-
-    await this.addTo('tests', {
-      date: Date.now(),
-      ...data,
-    });
+  private findComponentVersion(componentId: string, versionTag: string) {
+    if (!this.data) throw new Error('no data'); // FIXME
+    const componentVersions = this.data.versions.filter(x => x.componentId === componentId);
+    const existingVersion = componentVersions.find(x => x.tag === versionTag);
+    return existingVersion;
   }
 
+  // MISC
   private checkData(data: any): data is LedgerData {
     return (
       data &&
@@ -244,13 +313,6 @@ export class Ledger {
       Array.isArray((data as LedgerData).setups) &&
       Array.isArray((data as LedgerData).tests)
     );
-  }
-
-  private findComponentVersion(componentId: string, versionTag: string) {
-    if (!this.data) throw new Error('no data'); // FIXME
-    const componentVersions = this.data.versions.filter(x => x.componentId === componentId);
-    const existingVersion = componentVersions.find(x => x.tag === versionTag);
-    return existingVersion;
   }
 
   // TODO deal with polymorphic function signature phobia
@@ -264,77 +326,8 @@ export class Ledger {
     return this.data.components.findIndex(x => x.id === id) > -1;
   }
 
-  private async addTo(property: string, value: any, message = 'by Drill4J@VVVBot') {
-    const newData = {
-      ...this.data,
-      [property]: [...(this.data as any)[property], value],
-    };
-
-    const response = await (this.octokit as any).request(
-      `PUT /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
-      {
-        message,
-        content: this.serialize(newData as any),
-        sha: this.sha,
-      },
-    );
-    if (response.status !== 200) {
-      throw new Error(`Failed to update ledger data: ${response.data.error}`);
-    }
-
-    const check = await (this.octokit as any).request(
-      `GET /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
-    );
-
-    (this.data as any) = newData;
-    this.sha = response.data.content.sha;
-
-    if (this.sha !== check.data.sha) {
-      const msg = 'CRITICAL ERROR: post-update SHA check failed. Open development console, copy error log and contact the development team';
-      console.error(msg, '\n', 'response data', '\n', response, '\n', 'check data', '\n', check, '\n', '---CRITICAL ERROR LOG END---');
-      throw new Error(msg);
-    }
-  }
-
-  private deserialize(rawData: any): LedgerData {
-    return JSON.parse(b64_to_utf8(rawData));
-  }
-
-  private serialize(data: LedgerData): string {
-    return utf8_to_b64(JSON.stringify(data));
-  }
-
   private warning(msg: string) {
     this.isCli ? console.warn(msg) : alert(msg);
     return;
   }
-
-  // private test() {
-  // console.log('adding...');
-  // const c = [];
-  // for (let i = 0; i < 10; i++) {
-  //   const start = Date.now();
-  //   const check = [];
-  //   for (let index = 0; index < 10; index++) {
-  //     const { a, b } = await this.addTo('components', { name: `Drill4J Admin Backend ${i} - ${index}`, id: 'admin-backend' });
-  //     check.push(a === b);
-  //   }
-  //   const elapsed = Date.now() - start;
-  //   console.log('elapsed', elapsed, check);
-  //   let f = check.reduce((a, x) => a && x, true);
-  //   c.push(f);
-  //   console.log('reduced', f);
-  //   await this.sleep(60 * 1000);
-  // }
-  // console.log('done', c);
-  // }
-
-  // sleep(ms: number) {
-  //   console.log('sleep ms', ms);
-  //   return new Promise((resolve, reject) => {
-  //     setTimeout(() => {
-  //       resolve(null);
-  //     }, ms);
-  //   });
-  // }
 }

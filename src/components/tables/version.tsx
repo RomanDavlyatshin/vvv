@@ -14,41 +14,14 @@
  * limitations under the License.
  */
 import React from 'react';
-import styled from 'styled-components';
-import { useTable } from 'react-table';
+import { useTable, usePagination } from 'react-table';
 import ElapsedTimer from '../elapsed-timer';
 import { Component, Version } from '../../lib/types';
 import Question from '../question';
-import { C, L } from '../styles';
-
-interface ColumnDetails {
-  [key: string]: unknown;
-}
-
-const S = {
-  td: styled.td`
-    background-color: ${C.shade2};
-    border: 1px solid ${C.shade3};
-    color: ${C.white};
-    padding: ${L.paddingSm} ${L.paddingMd};
-    :empty {
-      background-color: rgba(45, 45, 45, 0.8);
-    }
-  `,
-  th: styled.th`
-    background-color: ${C.shade2};
-    border: 1px solid ${C.shade3};
-    color: ${C.white};
-    padding: ${L.paddingSm} ${L.paddingMd};
-  `,
-  tr: styled.tr`
-    :hover {
-      outline: 4px solid ${C.blue1};
-    }
-  `,
-};
-
-const sortBy = (prop: any) => (b: any, a: any) => b[prop] > a[prop] ? -1 : b[prop] < a[prop] ? 1 : 0;
+import { T } from './styles';
+import { ColumnDetails } from './types';
+import { Pagination } from './Pagination';
+import { sortBy } from './util';
 
 type VersionTableProps = {
   components: Component[];
@@ -81,7 +54,9 @@ export default function VersionTable(props: VersionTableProps) {
     [], // FIXME
   );
 
-  const tableInstance = useTable({ columns, data });
+  const tableInstance = useTable({ columns, data, initialState: { pageSize: 5 } } as any, usePagination);
+  const { getTableProps, getTableBodyProps, headerGroups, prepareRow } = tableInstance;
+  const { page }: any = tableInstance;
 
   // FIXME useMemo gets called in vain
   if (components.length === 0) {
@@ -91,40 +66,40 @@ export default function VersionTable(props: VersionTableProps) {
     return <div>no versions</div>;
   }
 
-  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = tableInstance;
-
   return (
     <div>
       <Question>
-        <span>Display "latests" row</span>
-        <span>| by date? by semver tag?</span>
-        <span>| add filtering and sorting?</span>
-        <span>| or display this data ONLY in SETUPS?</span>
+        <span>1. Filter tags "stable only" | "prerelease" | "experimental", etc</span>
+        <br />
+        <span>2. Allow sorting by either date or semver</span>
+        <br />
+        <span>3. Display latests row in setups</span>
       </Question>
       <table {...getTableProps()}>
         <thead>
           {headerGroups.map(headerGroup => (
-            <S.tr {...headerGroup.getHeaderGroupProps()}>
+            <T.Tr {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map(column => (
-                <S.th {...column.getHeaderProps()}>{column.render('Header')}</S.th>
+                <T.Th {...column.getHeaderProps()}>{column.render('Header')}</T.Th>
               ))}
-            </S.tr>
+            </T.Tr>
           ))}
         </thead>
         {/* Apply the table body props */}
         <tbody {...getTableBodyProps()}>
-          {rows.map(row => {
+          {page.map((row: any) => {
             prepareRow(row);
             return (
-              <S.tr {...row.getRowProps()}>
-                {row.cells.map(cell => {
-                  return <S.td {...cell.getCellProps()}>{cell.render('Cell')}</S.td>;
+              <T.Tr {...row.getRowProps()}>
+                {row.cells.map((cell: any) => {
+                  return <T.Td {...cell.getCellProps()}>{cell.render('Cell')}</T.Td>;
                 })}
-              </S.tr>
+              </T.Tr>
             );
           })}
         </tbody>
       </table>
+      <Pagination tableInstance={tableInstance} />
     </div>
   );
 }

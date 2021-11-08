@@ -42,14 +42,14 @@ button:focus {
 form {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 form label {
   color: rgb(106, 138, 85);
 }
 
-form * {
+form > * {
   margin-bottom: 7px;
 }
 

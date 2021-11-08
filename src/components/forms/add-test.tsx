@@ -32,8 +32,8 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
     <>
       <h3>New test result</h3>
       <Formik
-        initialValues={{ setupId: '', status: '' }}
-        onSubmit={async ({ setupId, status, ...other }, { setSubmitting }) => {
+        initialValues={{ setupId: '', status: '', description: '' }}
+        onSubmit={async ({ setupId, status, description, ...other }, { setSubmitting }) => {
           try {
             const componentVersionMap = Object.entries(other)
               .filter(([key]) => startsWith('component-')(key))
@@ -46,6 +46,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
               setupId,
               status,
               componentVersionMap,
+              description,
             });
 
             window.location.reload(); // pro react development
@@ -71,8 +72,12 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
             <ErrorMessage name="setupId" component="div" />
 
             <label htmlFor="add-test-field-status">Status</label>
-            <Field id="add-component-field-status" type="text" name="status" />
+            <Field id="add-component-field-status" type="text" name="status" placeholder="anything (passed, failed?)" />
             <ErrorMessage name="status" component="div" />
+
+            <label htmlFor="add-test-field-description">Description</label>
+            <Field id="add-component-field-description" type="text" name="description" placeholder="something informative" />
+            <ErrorMessage name="description" component="div" />
 
             <label htmlFor="add-test-field-status">Component Versions</label>
             <Versions components={components} />
@@ -99,13 +104,19 @@ function Versions(props: { components: Component[] }) {
   const components = props.components;
   if (!Array.isArray(components) || components.length === 0) return <Spinner>...select setup first</Spinner>;
   return (
-    <>
+    <table>
       {components.map(component => (
-        <div key={component.id}>
-          <label htmlFor={`add-test-field-component-${component.id}`}>{component.name}</label>
-          <Field id={`add-test-field-component-${component.id}`} type="text" name={`component-${component.id}`} placeholder="x.y.z" />
-        </div>
+        <tr key={component.id}>
+          <td>
+            <label style={{ cursor: 'pointer' }} htmlFor={`add-test-field-component-${component.id}`}>
+              {component.name}
+            </label>
+          </td>
+          <td>
+            <Field id={`add-test-field-component-${component.id}`} type="text" name={`component-${component.id}`} placeholder="x.y.z" />
+          </td>
+        </tr>
       ))}
-    </>
+    </table>
   );
 }

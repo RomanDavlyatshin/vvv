@@ -41,7 +41,7 @@ export default function NoRender({ initialRender = false, label, children }: NoR
   const [isRendered, setIsRendered] = useState(initialRender);
 
   return (
-    <Styled.wrapper>
+    <Styled.wrapper title="click to expand">
       <Styled.button onClick={() => setIsRendered(!isRendered)}>{label}</Styled.button>
       {isRendered && <Styled.children>{children}</Styled.children>}
     </Styled.wrapper>

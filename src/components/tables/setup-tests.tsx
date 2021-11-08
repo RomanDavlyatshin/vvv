@@ -14,47 +14,18 @@
  * limitations under the License.
  */
 import React from 'react';
-import styled from 'styled-components';
-import { useTable } from 'react-table';
+import { usePagination, useTable } from 'react-table';
 import ElapsedTimer from '../elapsed-timer';
 import { Setup, TestResult } from '../../lib/types';
 import ComponentsVersionsMap from '../components-versions-map';
-import { C, L } from '../styles';
 import NoRender from '../no-render';
-
-interface ColumnDetails {
-  [key: string]: unknown;
-}
-
-const S = {
-  td: styled.td`
-    background-color: ${C.shade2};
-    border: 1px solid ${C.shade3};
-    color: ${C.white};
-    padding: ${L.paddingSm} ${L.paddingMd};
-    vertical-align: top;
-    :empty {
-      background-color: rgba(45, 45, 45, 0.8);
-    }
-  `,
-  th: styled.th`
-    background-color: ${C.shade2};
-    border: 1px solid ${C.shade3};
-    color: ${C.white};
-    padding: ${L.paddingSm} ${L.paddingMd};
-  `,
-  tr: styled.tr`
-    :hover {
-      outline: 4px solid ${C.blue1};
-    }
-  `,
-};
-
-const sortBy = (prop: any) => (b: any, a: any) => b[prop] > a[prop] ? -1 : b[prop] < a[prop] ? 1 : 0;
+import { sortBy } from './util';
+import { ColumnDetails } from './types';
+import { T } from './styles';
+import { Pagination } from './Pagination';
 
 type VersionTableProps = {
   setup: Setup;
-  // components: Component[];
   tests: TestResult[];
 };
 
@@ -68,7 +39,7 @@ export default function SetupTestsTable(props: VersionTableProps) {
         description: x.description,
         componentVersionMap: x.componentVersionMap,
       })),
-    [],
+    [], // FIXME
   );
 
   const columns = React.useMemo(
@@ -83,6 +54,15 @@ export default function SetupTestsTable(props: VersionTableProps) {
       {
         Header: 'Description',
         accessor: 'description',
+        Cell: (props: any) => {
+          const text = props.row.values.description;
+          if (!text) return null;
+          const MAX_LEN = 10;
+          if (text.length < MAX_LEN) {
+            return text;
+          }
+          return <NoRender label={`${text.slice(0, 10)}...`}>{text}</NoRender>;
+        },
       },
       {
         Header: 'Status',
@@ -99,13 +79,13 @@ export default function SetupTestsTable(props: VersionTableProps) {
           );
         },
       },
-      // ...components.map(c => ({ Header: c.name, accessor: c.id })),
     ],
     [],
   );
 
-  const tableInstance = useTable({ columns, data });
+  const tableInstance = useTable({ columns, data, initialState: { pageSize: 5 } } as any, usePagination);
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = tableInstance;
+  const { page }: any = tableInstance;
 
   return (
     <div>
@@ -115,53 +95,57 @@ export default function SetupTestsTable(props: VersionTableProps) {
             // Loop over the header rows
             headerGroups.map(headerGroup => (
               // Apply the header row props
-              <S.tr {...headerGroup.getHeaderGroupProps()}>
+              <T.Tr {...headerGroup.getHeaderGroupProps()}>
                 {
                   // Loop over the headers in each row
                   headerGroup.headers.map(column => (
                     // Apply the header cell props
-                    <S.th {...column.getHeaderProps()}>
+                    <T.Th {...column.getHeaderProps()}>
                       {
                         // Render the header
                         column.render('Header')
                       }
-                    </S.th>
+                    </T.Th>
                   ))
                 }
-              </S.tr>
+              </T.Tr>
             ))
           }
         </thead>
         {/* Apply the table body props */}
         <tbody {...getTableBodyProps()}>
-          {
-            // Loop over the table rows
-            rows.map(row => {
+          {rows.length <= 0 && (
+            <T.Tr>
+              <T.Td colSpan={columns.length}>No data on setup tests</T.Td>
+            </T.Tr>
+          )}
+          {rows.length > 0 &&
+            page.map((row: any) => {
               // Prepare the row for display
               prepareRow(row);
               return (
                 // Apply the row props
-                <S.tr {...row.getRowProps()}>
+                <T.Tr {...row.getRowProps()}>
                   {
                     // Loop over the rows cells
-                    row.cells.map(cell => {
+                    row.cells.map((cell: any) => {
                       // Apply the cell props
                       return (
-                        <S.td {...cell.getCellProps()}>
+                        <T.Td {...cell.getCellProps()}>
                           {
                             // Render the cell contents
                             cell.render('Cell')
                           }
-                        </S.td>
+                        </T.Td>
                       );
                     })
                   }
-                </S.tr>
+                </T.Tr>
               );
-            })
-          }
+            })}
         </tbody>
       </table>
+      <Pagination tableInstance={tableInstance} />
     </div>
   );
 }
