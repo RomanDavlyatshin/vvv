@@ -20,7 +20,7 @@ import { Component, LedgerData } from '../../lib/types';
 import { useState } from 'react';
 import { Ledger } from '../../lib/ledger';
 import { startsWith, stripPrefix } from './util';
-import Question from '../Question';
+import Question from '../question';
 
 export default (props: { ledger: Ledger; data: LedgerData }) => {
   if (!Array.isArray(props.data.setups) || props.data.setups.length === 0) {

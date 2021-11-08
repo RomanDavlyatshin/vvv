@@ -13,7 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export default function () {
+
+type PlaceholderProps = {
+  authenticate: (...arg: any[]) => any;
+};
+
+export default function (props: PlaceholderProps) {
   return (
     <div style={{ position: 'relative' }}>
       <div
@@ -28,13 +33,22 @@ export default function () {
       >
         <h2 style={{ flex: '1', textAlign: 'center' }}>
           You cannot see anything yet <br />
-          because <br /> you must login
+          because <br /> you must{' '}
+          <span
+            style={{ color: 'white', textDecoration: 'underline', cursor: 'pointer' }}
+            onClick={e => {
+              e.preventDefault();
+              props.authenticate();
+            }}
+          >
+            Authenticate
+          </span>
         </h2>
       </div>
       <img
         alt="placeholder"
         style={{ width: '100%', height: 'calc(100vh - 39px)' }}
-        src="https://img5.goodfon.ru/original/1920x1080/c/cb/sea-bird-grey-ocean.jpg"
+        src="https://img5.goodfon.ru/original/1920x1080/c/cb/sea-bird-grey-ocean.jpg" // FIXME this is probably copyrighted and is very depressing :D
       />
     </div>
   );

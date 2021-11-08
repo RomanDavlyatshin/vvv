@@ -46,7 +46,7 @@ function App() {
         </div>
         <User />
       </div>
-      <div className="main-ui">{connection.isConnected() ? <RenderStuff /> : <Nothing />}</div>
+      <div className="main-ui">{connection.isConnected() ? <RenderStuff /> : <Nothing authenticate={() => connection.connect()} />}</div>
     </div>
   );
 }
@@ -57,17 +57,16 @@ function RenderStuff() {
 
   if (!data) return <Spinner>ledger.json is not initialized. Make sure to follow setup instructions or contact dev team</Spinner>;
 
-  const { components, setups, versions, tests } = data;
   return (
     <div className="px-2">
       <div>
         Refreshed <ElapsedTimer />
       </div>
-      <JSONDataStyled.wrapper>
+      <JSONDataStyled>
         <NoRender label="Debug Data">
           <JSONData data={data} />
         </NoRender>
-      </JSONDataStyled.wrapper>
+      </JSONDataStyled>
       {/*SETUPS  */}
       <h3 className="mt-3">SETUPS</h3>
       {data.setups.map(setup => {
@@ -103,8 +102,7 @@ function RenderStuff() {
   );
 }
 
-const JSONDataStyled = {
-  wrapper: styled.div`
+const JSONDataStyled = styled.div`
     position: absolute;
     top: 0;
     right: 0;
@@ -112,8 +110,7 @@ const JSONDataStyled = {
     font-size: 12px;
     text-align: right;
     background-color: rgba(0, 0, 0, 0.2);
-  `,
-};
+  `;
 function JSONData({ data }: { data: LedgerData }) {
   return (
     <div>

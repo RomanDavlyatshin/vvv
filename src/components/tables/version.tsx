@@ -18,7 +18,7 @@ import styled from 'styled-components';
 import { useTable } from 'react-table';
 import ElapsedTimer from '../elapsed-timer';
 import { Component, Version } from '../../lib/types';
-import Question from '../Question';
+import Question from '../question';
 import { C, L } from '../styles';
 
 interface ColumnDetails {
