@@ -73,16 +73,15 @@ function RenderStuff() {
         {data.setups.map(setup => {
           const setupTests = ledger.getSetupTests(setup.id);
           return (
-            <div className="col-12 col-md-6 col-xl-3 mb-3" key={setup.id}>
+            <div className="col-12 col-md-6 col-xl-4 mb-3" key={setup.id}>
               <h5>{setup.name}</h5>
               <SetupTestsTable setup={setup} tests={setupTests} />
             </div>
           );
         })}
       </div>
-
       <h3 className="mt-3">VERSIONS</h3>
-      <VersionTable versions={data.versions} components={data.components} />
+      <VersionTable versions={data.versions} components={data.components} ledger={ledger} />
 
       {/*FORMS  */}
       <div className="row mt-5">
@@ -109,6 +108,8 @@ const JSONDataStyled = styled.div`
   right: 0;
   font-size: 12px;
   background-color: rgb(0, 0, 0);
+  overflow-y: auto;
+  max-height: 30vh;
 `;
 function JSONData({ data }: { data: LedgerData }) {
   return (

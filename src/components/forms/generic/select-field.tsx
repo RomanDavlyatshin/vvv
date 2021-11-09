@@ -19,12 +19,13 @@ import React from 'react';
 import Select, * as ReactSelect from 'react-select';
 
 // TODO fix dirty hacks with cb
-export default (onChangeCb: (...args: any[]) => any): React.SFC<ReactSelect.Props & FieldProps> =>
+export default (onChangeCb: (...args: any[]) => any = () => null): React.SFC<ReactSelect.Props & FieldProps> =>
   ({ options, field, form }) =>
     (
       <Select
         options={options}
         name={field.name}
+        className={'select-field'}
         value={options ? options.find((x: any) => x.value === field.value) : ''}
         onChange={(option: any) => {
           form.setFieldValue(field.name, option.value);

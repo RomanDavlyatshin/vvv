@@ -54,3 +54,5 @@ export type RawTestResult = {
 export type TestResult = RawTestResult & {
   date: string;
 };
+
+export type ComponentsAvailableVersionsMap = { [componentId: string]: string[] };

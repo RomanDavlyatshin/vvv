@@ -15,6 +15,7 @@
  */
 import React from 'react';
 import { usePagination, useTable } from 'react-table';
+import styled from 'styled-components';
 import ElapsedTimer from '../elapsed-timer';
 import { Setup, TestResult } from '../../lib/types';
 import ComponentsVersionsMap from '../components-versions-map';
@@ -27,6 +28,13 @@ import { Pagination } from './Pagination';
 type VersionTableProps = {
   setup: Setup;
   tests: TestResult[];
+};
+
+const S = {
+  Table: styled.table`
+    white-space: nowrap;
+    min-width: 100%;
+  `,
 };
 
 export default function SetupTestsTable(props: VersionTableProps) {
@@ -89,7 +97,7 @@ export default function SetupTestsTable(props: VersionTableProps) {
 
   return (
     <div>
-      <table {...getTableProps()}>
+      <S.Table {...getTableProps()}>
         <thead>
           {
             // Loop over the header rows
@@ -144,7 +152,7 @@ export default function SetupTestsTable(props: VersionTableProps) {
               );
             })}
         </tbody>
-      </table>
+      </S.Table>
       <Pagination tableInstance={tableInstance} />
     </div>
   );

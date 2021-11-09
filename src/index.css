@@ -59,6 +59,10 @@ form > * {
   border-radius: 100%;
 }
 
+.select-field {
+  color: black;
+}
+
 .github-user-link {
   color: inherit;
   text-decoration: none;

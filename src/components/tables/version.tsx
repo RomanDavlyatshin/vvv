@@ -15,6 +15,7 @@
  */
 import React from 'react';
 import { useTable, usePagination } from 'react-table';
+import styled from 'styled-components';
 import ElapsedTimer from '../elapsed-timer';
 import { Component, Version } from '../../lib/types';
 import Question from '../question';
@@ -22,10 +23,18 @@ import { T } from './styles';
 import { ColumnDetails } from './types';
 import { Pagination } from './Pagination';
 import { sortBy } from './util';
+import { Ledger } from '../../lib/ledger';
 
 type VersionTableProps = {
   components: Component[];
   versions: Version[];
+  ledger: Ledger; // FIXME I don't like it
+};
+
+const S = {
+  Table: styled.table`
+    white-space: nowrap;
+  `,
 };
 
 export default function VersionTable(props: VersionTableProps) {
@@ -49,7 +58,7 @@ export default function VersionTable(props: VersionTableProps) {
           return <ElapsedTimer start={props.row.values.release} />;
         },
       },
-      ...components.map(c => ({ Header: c.name, accessor: c.id })),
+      ...components.map(c => ({ Header: c.name, Latest: props.ledger.getLatestComponentVersion(c.id)?.tag, accessor: c.id })),
     ],
     [], // FIXME
   );
@@ -75,14 +84,24 @@ export default function VersionTable(props: VersionTableProps) {
         <br />
         <span>3. Display latests row in setups</span>
       </Question>
-      <table {...getTableProps()}>
+      <div></div>
+      <S.Table {...getTableProps()}>
         <thead>
           {headerGroups.map(headerGroup => (
-            <T.Tr {...headerGroup.getHeaderGroupProps()}>
-              {headerGroup.headers.map(column => (
-                <T.Th {...column.getHeaderProps()}>{column.render('Header')}</T.Th>
-              ))}
-            </T.Tr>
+            <>
+              <T.Tr {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map(column => {
+                  debugger;
+                  return (
+                    // <T.Th {...column.getHeaderProps()}>{column.render('Header')}</T.Th>
+                    <T.Th {...column.getHeaderProps()}>
+                      <div>{column.render('Header')}</div>
+                      <div>{(column as any).Latest ? column.render('Latest') : '__'}</div>
+                    </T.Th>
+                  );
+                })}
+              </T.Tr>
+            </>
           ))}
         </thead>
         {/* Apply the table body props */}
@@ -98,7 +117,7 @@ export default function VersionTable(props: VersionTableProps) {
             );
           })}
         </tbody>
-      </table>
+      </S.Table>
       <Pagination tableInstance={tableInstance} />
     </div>
   );

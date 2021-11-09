@@ -21,7 +21,16 @@
 
 import { Octokit } from '@octokit/core';
 import semver from 'semver';
-import { LedgerRepoOptions, LedgerData, Setup, RawVersion, RawTestResult, Component, Version } from './types';
+import {
+  LedgerRepoOptions,
+  LedgerData,
+  Setup,
+  RawVersion,
+  RawTestResult,
+  Component,
+  Version,
+  ComponentsAvailableVersionsMap,
+} from './types';
 import { b64_to_utf8, utf8_to_b64 } from './util';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -302,6 +311,23 @@ export class Ledger {
     const componentVersions = this.data.versions.filter(x => x.componentId === componentId);
     const existingVersion = componentVersions.find(x => x.tag === versionTag);
     return existingVersion;
+  }
+
+  public getComponentsVersions(componentIds: string[]): ComponentsAvailableVersionsMap {
+    if (!this.data) throw new Error('no data'); // FIXME
+    const result = componentIds.reduce<ComponentsAvailableVersionsMap>((a, x) => {
+      a[x] = [];
+      return a;
+    }, {});
+
+    this.data.versions
+      .filter(x => result[x.componentId])
+      .sort((a, b) => semver.compare(b.tag, a.tag)) // this "should" work as intended
+      .forEach(x => {
+        result[x.componentId].push(x.tag);
+      });
+
+    return result;
   }
 
   // MISC

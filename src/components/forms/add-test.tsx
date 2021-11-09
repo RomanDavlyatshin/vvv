@@ -17,10 +17,11 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import SelectField from './generic/select-field';
 import Spinner from '../spinner';
 import { Component, LedgerData } from '../../lib/types';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Ledger } from '../../lib/ledger';
 import { startsWith, stripPrefix } from './util';
 import Question from '../question';
+import Alert from '../alert';
 
 export default (props: { ledger: Ledger; data: LedgerData }) => {
   if (!Array.isArray(props.data.setups) || props.data.setups.length === 0) {
@@ -32,7 +33,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
     <>
       <h3>New test result</h3>
       <Formik
-        initialValues={{ setupId: '', status: '', description: '' }}
+        initialValues={{ setupId: '', status: '', description: '', componentVersionMap: {} }}
         onSubmit={async ({ setupId, status, description, ...other }, { setSubmitting }) => {
           try {
             const componentVersionMap = Object.entries(other)
@@ -42,16 +43,19 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
                 return a;
               }, {});
 
-            await props.ledger.addTest({
+            const data = {
               setupId,
               status,
               componentVersionMap,
               description,
-            });
+            };
+            console.log(data);
+            await props.ledger.addTest(data);
 
             window.location.reload(); // pro react development
           } catch (e) {
             alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
+            // not so sure about that finally
           } finally {
             setSubmitting(false);
           }
@@ -66,6 +70,9 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
               component={SelectField(async (setupId: string, form) => {
                 const components = await props.ledger.getSetupComponents(setupId);
                 setComponents(components);
+                form.resetForm({
+                  values: { setupId, status: form.values.status, description: form.values.description, componentVersionMap: {} },
+                });
               })}
               options={setups}
             />
@@ -80,7 +87,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
             <ErrorMessage name="description" component="div" />
 
             <label htmlFor="add-test-field-status">Component Versions</label>
-            <Versions components={components} />
+            <Versions components={components} ledger={props.ledger} />
             <button type="submit" disabled={isSubmitting}>
               Submit
             </button>
@@ -100,23 +107,63 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
   );
 };
 
-function Versions(props: { components: Component[] }) {
+// FIXME don't toss ledger around, obtain it directly instead
+function useVersions(componentIds: string[], ledger: Ledger): { isLoading: boolean; vers: Record<string, string[]>; error: string } {
+  const [vers, setVers] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      setIsLoading(true);
+      try {
+        const availableVersions = await ledger.getComponentsVersions(componentIds);
+        setVers(availableVersions);
+      } catch (e: any) {
+        setError(`Failed to load versions. Error: ${e?.message || 'unknown'}`);
+      }
+      setIsLoading(false);
+    })();
+  }, [componentIds]); // FIXME missing ledger dep
+
+  return { isLoading, vers, error };
+}
+
+function Versions(props: { ledger: Ledger; components: Component[] }) {
   const components = props.components;
+  const componentIds = useMemo(() => components.map(x => x.id), [components]);
+  const { isLoading: isLoadingVersionsData, vers, error } = useVersions(componentIds, props.ledger);
+
   if (!Array.isArray(components) || components.length === 0) return <Spinner>...select setup first</Spinner>;
+  if (isLoadingVersionsData) return <Spinner>loading versions</Spinner>;
+  if (error) return <Alert>{error}</Alert>;
+
   return (
     <table>
-      {components.map(component => (
-        <tr key={component.id}>
-          <td>
-            <label style={{ cursor: 'pointer' }} htmlFor={`add-test-field-component-${component.id}`}>
-              {component.name}
-            </label>
-          </td>
-          <td>
-            <Field id={`add-test-field-component-${component.id}`} type="text" name={`component-${component.id}`} placeholder="x.y.z" />
-          </td>
-        </tr>
-      ))}
+      <tbody>
+        {components.map(component => (
+          <tr key={component.id}>
+            <td>
+              <label style={{ cursor: 'pointer' }} htmlFor={`add-test-field-component-${component.id}`}>
+                {component.name}
+              </label>
+            </td>
+            <td>
+              {!Array.isArray(vers[component.id]) ? (
+                'no versions'
+              ) : (
+                <Field
+                  id={`add-test-field-component-${component.id}`}
+                  name={`component-${component.id}`}
+                  // placeholder="x.y.z"
+                  component={SelectField()}
+                  options={vers[component.id].map(versionTag => ({ value: versionTag, label: versionTag }))}
+                />
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
     </table>
   );
 }

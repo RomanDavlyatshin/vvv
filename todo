@@ -1,6 +1,29 @@
-Validate "New test result" for exhaustive list of setup's component versions
-add "type" to test result?
-with arbitrary string, e.g. "e2e UI", "manual" etc
+UI
+    + add tests - version pickers
+    +/-show latest versions
+        - both in version table & setups
+        - copy latests on click in .env format
+    ledger
+        - trim all strings
+        - provide latests
+            - for all components
+            - for setup
+        - validate "New test result" for exhaustive list of setup's component versions
+    versions tables overflow x - scrollbar
+    Edit - everything (except ids)
+
+Challenges
+    editing setup components
+
+Create github action to submit
+    - new version
+    - test result
+
+add "type" to test result? - with arbitrary string, e.g. "e2e UI", "manual" etc
+
+setups - improve layout for clarity
+
+admin backend test2code plugin java-agent admin-ui (old) admin-ui (microfrontend) test2code-ui state-watcher-ui autotest-agent js-agent ast-parser agent-runner browser-proxy browser ext manual ktor-swagger
 
 editing fields
 
