@@ -19,7 +19,7 @@ _You got to stop feeling that way_.
 
 2. **UI**
 
-   This repo - UI developed with [Create React App](https://github.com/facebook/create-react-app), hosted on [GitHub pages](https://pages.github.com/)
+   [This repo - the UI](https://romandavlyatshin.github.io/vvv/) developed with [Create React App](https://github.com/facebook/create-react-app), hosted on [GitHub pages](https://pages.github.com/)
 
 3. **Data storage**
 
