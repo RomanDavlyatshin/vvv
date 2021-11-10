@@ -1,46 +1,89 @@
-# Getting Started with Create React App
+# VersiOnion
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Components versions compatibility tracking that won't make you cry
 
-## Available Scripts
+![no-mo-tears](https://i.giphy.com/media/L95W4wv8nnb9K/giphy.webp)
 
-In the project directory, you can run:
+_You got to stop feeling that way_.
 
-### `npm start`
+## The moving parts
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+1. **Authentication**
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+   - Is done using [GitHub application](https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app)
 
-### `npm test`
+   - and [proxy](https://github.com/RomanDavlyatshin/git-proxy) based on <https://github.com/krispo/git-proxy> (deployed on Heroku)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+   It allows to make calls to [GitHub API](https://docs.github.com/en/rest) directly from browser.
+   Though is proxy _is required_ to authenticate using [GitHub OAuth](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps)
 
-### `npm run build`
+2. **UI**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+   This repo - UI developed with [Create React App](https://github.com/facebook/create-react-app), hosted on [GitHub pages](https://pages.github.com/)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Data storage**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   [There is a separate repo](https://github.com/RomanDavlyatshin/ledger) that stores **all data about components, setups, versions, tests** in [ledger.json](https://github.com/RomanDavlyatshin/ledger/blob/main/ledger.json) file
 
-### `npm run eject`
+4. **CI/CD integration**
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+   There is a Github Action that allows to push data about new versions/test results from your CI/CD workflow
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+> TODO add link to action repository
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## How it works
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+1. Data about all `Components`, `Setups` (which are just a list of components), `Versions` and `Test results` is stored in [`ledger.json`](https://github.com/RomanDavlyatshin/ledger/blob/main/ledger.json) file in separate repo.
 
-## Learn More
+2. To make things easy, UI is hosted on Github pages to edit it
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+3. End-users authenticate on that page using GitHub OAuth
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+4. There is a separate GitHub action that adds data to aforementioned file automatically
+
+5. Anyone can access [`ledger.json`](https://github.com/RomanDavlyatshin/ledger/blob/main/ledger.json) from anywhere. Find out latest versions, see if tests are failing, etc.
+
+## Project Structure
+
+1. `src/lib/ledger.ts` is used to manipulate data
+
+   - it is utilized both by UI and GithubAction
+   - it's constructor accepts:
+     1. `octokitAuthToken` - _any_ kind of access token provided by GitHub. It could be _Personal access token_ generated in account settings or _OAuth token_ generated when authenticated via OAuth app
+     2. `ledgerRepo`
+
+2. UI components are in `src/index.tsx`, `src/components/**` and hooks to access GitHub API are in `src/github/hooks/`
+
+3. `src/github/hooks/third-party` contains slightly modified [`git-connect`](https://github.com/krispo/git-connect) library source. It enables handling GitHub authentication events
+
+   > TODO: move `src/github/third-party` folder to `./third-party/`?
+
+## Publish new UI version
+
+Make your changes! Then:
+
+1. Create `.env` file with following contents:
+
+   ```env
+     REACT_APP_GITHUB_OAUTH_APP_CLIENT_ID="684e39e0e69952196fd1"
+     REACT_APP_GITHUB_OAUTH_APP_PROXY="https://versionion-test-git-proxy.herokuapp.com"
+     REACT_APP_GITHUB_OAUTH_APP_SCOPES="repo,user"
+     REACT_APP_LEDGER_REPO_OWNER="RomanDavlyatshin"
+     REACT_APP_LEDGER_REPO_URL="https://github.com/RomanDavlyatshin/ledger"
+     REACT_APP_LEDGER_REPO_NAME="ledger"
+   ```
+
+2. Run `npm run deploy` command.
+
+3. Check the <https://romandavlyatshin.github.io/vvv/> page to see if changes applied
+
+## Changing URL/ GitHub OAuth App / Git Proxy Address
+
+> TODO: write that
+
+## Relevant tools/libraries/how-to-s
+
+- <https://github.com/krispo/git-connect>
+- <https://github.com/krispo/git-proxy>
+- <https://github.com/octokit>
+- <https://github.com/gitname/react-gh-pages>

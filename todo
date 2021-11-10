@@ -6,7 +6,7 @@ UI
         + provide latests
             + for all components
             - for setup
-        - validate "New test result" for exhaustive list of setup's component versions
+        + validate "New test result" for exhaustive list of setup's component versions
     + versions tables overflow x - scrollbar
 
 Create github action to submit
@@ -30,6 +30,8 @@ Next steps
     Raw tests results table
 
 Improvements
+    Show loader when authentication is in progress (after code is obtained, but oktokit instance is not created yet)
+    Show errors if authentication fails (e.g. due to proxy being down/unavailable)
     - copy latests on click in .env format
     add "type" to test result? - with arbitrary string, e.g. "e2e UI", "manual" etc
 
