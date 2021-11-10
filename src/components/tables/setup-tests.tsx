@@ -47,14 +47,14 @@ export default function SetupTestsTable(props: VersionTableProps) {
         description: x.description,
         componentVersionMap: x.componentVersionMap,
       })),
-    [], // FIXME
+    [tests, tests.length], // FIXME
   );
 
   const columns = React.useMemo(
     () => [
       {
         Header: 'Date',
-        accessor: 'date', // FIXME redundant?
+        accessor: 'date',
         Cell: (props: any) => {
           return <ElapsedTimer start={props.row.values.date} />;
         },
@@ -65,6 +65,7 @@ export default function SetupTestsTable(props: VersionTableProps) {
         Cell: (props: any) => {
           const text = props.row.values.description;
           if (!text) return null;
+          // TODO move it elsewhere
           const MAX_LEN = 10;
           if (text.length < MAX_LEN) {
             return text;

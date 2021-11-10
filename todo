@@ -1,25 +1,37 @@
 UI
     + add tests - version pickers
-    +/-show latest versions
-        - both in version table & setups
-        - copy latests on click in .env format
+    + show latest versions version table
     ledger
-        - trim all strings
-        - provide latests
-            - for all components
+        +/- trim all strings
+        + provide latests
+            + for all components
             - for setup
         - validate "New test result" for exhaustive list of setup's component versions
-    versions tables overflow x - scrollbar
-    Edit - everything (except ids)
-
-Challenges
-    editing setup components
+    + versions tables overflow x - scrollbar
 
 Create github action to submit
     - new version
     - test result
 
-add "type" to test result? - with arbitrary string, e.g. "e2e UI", "manual" etc
+Next steps
+    Validate local SHA hash against remote both __prior to__ and after sending the update
+        retries on fail? (big brain stuff)
+
+    Edit basic
+        - names, descriptions, etc
+
+    TEST check that only Drill4J-org users can _edit_
+        - on submit show error for not-authorized users
+
+    Editing setups components
+        - 
+    Hide CREATE/EDIT controls for non-authorized users
+
+    Raw tests results table
+
+Improvements
+    - copy latests on click in .env format
+    add "type" to test result? - with arbitrary string, e.g. "e2e UI", "manual" etc
 
 setups - improve layout for clarity
 

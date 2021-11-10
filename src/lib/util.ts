@@ -20,3 +20,9 @@ export function utf8_to_b64(str: string) {
 export function b64_to_utf8(str: string) {
   return decodeURIComponent(escape(window.atob(str)));
 }
+
+export function validateNonEmptyString(key: string, value: string): void | never {
+  if (!value || typeof value !== 'string') {
+    throw new Error(`Expected ${key} to be a non-empty string, but got: "${value}"`);
+  }
+}

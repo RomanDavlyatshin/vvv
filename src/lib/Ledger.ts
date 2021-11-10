@@ -31,7 +31,7 @@ import {
   Version,
   ComponentsAvailableVersionsMap,
 } from './types';
-import { b64_to_utf8, utf8_to_b64 } from './util';
+import { b64_to_utf8, utf8_to_b64, validateNonEmptyString } from './util';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -97,11 +97,17 @@ export class Ledger {
     return this;
   }
 
-  private async addTo(property: string, value: any) {
+  private async addTo<T>(property: string, value: T) {
     const newData = {
       ...this.data,
       [property]: [...(this.data as any)[property], value],
     };
+
+    // TODO implement
+    // const preCheck = await (this.octokit as any).request(
+    //   `GET /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
+    // );
+    // this.sha === preCheck.data.content.sha
 
     const response = await (this.octokit as any).request(
       `PUT /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
@@ -115,16 +121,16 @@ export class Ledger {
       throw new Error(`Failed to update ledger data: ${response.data.error}`);
     }
 
-    const check = await (this.octokit as any).request(
+    const postCheck = await (this.octokit as any).request(
       `GET /repos/${this.ledgerRepo.owner}/${this.ledgerRepo.name}/contents/${this.ledgerFilePath}`,
     );
 
     (this.data as any) = newData;
     this.sha = response.data.content.sha;
 
-    if (this.sha !== check.data.sha) {
+    if (this.sha !== postCheck.data.sha) {
       const msg = 'CRITICAL ERROR: post-update SHA check failed. Open development console, copy error log and contact the development team';
-      console.error(msg, '\n', 'response data', '\n', response, '\n', 'check data', '\n', check, '\n', '---CRITICAL ERROR LOG END---');
+      console.error(msg, '\n', 'response data', '\n', response, '\n', 'check data', '\n', postCheck, '\n', '---CRITICAL ERROR LOG END---');
       throw new Error(msg);
     }
   }
@@ -138,16 +144,23 @@ export class Ledger {
   }
 
   // CREATE
-  public async addComponent(data: Component) {
+  public async addComponent(rawData: Component) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
-    if (this.isComponentExists(data.id, data.name)) {
+    // TODO replace with something like joi but lightweight
+    validateNonEmptyString('id', rawData.id);
+    validateNonEmptyString('name', rawData.name);
+
+    if (this.isComponentExists(rawData.id, rawData.name)) {
       throw new Error('Component with the same id or name already exists');
     }
 
-    await this.addTo('components', data);
+    await this.addTo<Component>('components', {
+      id: rawData.id.trim(),
+      name: rawData.name.trim(),
+    });
   }
 
   public async addSetup(rawSetupData: Setup) {
@@ -155,8 +168,11 @@ export class Ledger {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
+    validateNonEmptyString('id', rawSetupData.id);
+    validateNonEmptyString('name', rawSetupData.name);
+
     if (!Array.isArray(rawSetupData.componentIds) || rawSetupData.componentIds.length === 0) {
-      throw new Error('Components array must contain at least one component id');
+      throw new Error('Setup must include at least one component');
     }
 
     const alreadyExists = this.data.setups.findIndex(x => x.id === rawSetupData.id || x.name === rawSetupData.name) > -1;
@@ -179,7 +195,6 @@ export class Ledger {
         .map(x => x.componentIds)
         .map(getComponentsHash)
         .findIndex(x => x === newHash) === -1;
-
     if (!isUnique) {
       throw new Error('Setup with the same list of components already exist');
     }
@@ -190,28 +205,32 @@ export class Ledger {
       throw new Error(`Components with the following ids do not exist:\n${nonExistentComponents.join('\n')}`);
     }
 
-    const data = {
-      ...rawSetupData,
+    await this.addTo<Setup>('setups', {
+      id: rawSetupData.id.trim(),
+      name: rawSetupData.name.trim(),
       componentIds: rawSetupData.componentIds.sort(),
-    };
-
-    await this.addTo('setups', data);
+    });
   }
 
-  public async addVersion(data: RawVersion) {
+  public async addVersion(rawData: RawVersion) {
     if (!this.checkData(this.data)) {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
-    const { componentId, tag } = data;
+    const { componentId, tag } = rawData;
+
+    validateNonEmptyString('componentId', componentId);
+    validateNonEmptyString('tag', tag);
+
     if (!this.isComponentExists(componentId)) {
       throw new Error(`Component with id "${componentId}" does not exist`);
+      // if (this.softMode)
       // const msg = `Component with id ${componentId} does not exist, but it will be added automatically. Later, you can edit it's parameters manually`;
       // this.warning(msg);
       // await this.addComponent({ id: componentId, name: componentId });
     }
 
-    const existingVersion = this.findComponentVersion(componentId, tag);
+    const existingVersion = this.findVersion(componentId, tag);
     if (existingVersion) {
       const msg = `
       Version ${componentId}:${tag} already exists.
@@ -222,7 +241,11 @@ export class Ledger {
       this.warning(msg);
     }
 
-    await this.addTo('versions', { date: Date.now(), componentId, tag });
+    await this.addTo('versions', {
+      date: Date.now(),
+      componentId: componentId.trim(),
+      tag: tag.trim(),
+    });
   }
 
   public async addTest(data: RawTestResult) {
@@ -230,30 +253,50 @@ export class Ledger {
       throw new Error(`No local data; Check internet connection and make sure that Github and ${this.ledgerRepo.url} are reachable`);
     }
 
+    validateNonEmptyString('id', data.setupId);
+    validateNonEmptyString('status', data.status);
+
+    if (Object.keys(data.componentVersionMap).length === 0) {
+      throw new Error('Please specify a version for each of the components');
+    }
+
     // existing setup
-    const isSetupExists = this.data.setups.findIndex(x => x.id === data.setupId) > -1;
-    if (!isSetupExists) {
+    const setup = this.getSetupById(data.setupId);
+    if (!setup) {
       const msg = `Setup with id ${data.setupId} doesn't exists.
       Test result will be saved, but will only be visible in raw tests data table.
       Make sure to add ${data.setupId} to setups list.`;
       this.warning(msg);
+      // FIXME I hate it
+      this.validateSetupComponentsList(data);
+    } else {
+      this.validateSetupComponentsList(data, setup.componentIds);
     }
 
-    // non-empty status
-    if (!data.status || typeof data.status !== 'string') {
-      throw new Error('Test result must contain non-empty status string');
+    await this.addTo('tests', {
+      date: Date.now(),
+      componentVersionMap: data.componentVersionMap,
+      setupId: data.setupId,
+      status: data.status.trim(),
+      description: data.description?.trim(),
+    });
+  }
+
+  private validateSetupComponentsList(data: RawTestResult, setupComponentIds?: string[]) {
+    const inputIds = Object.keys(data.componentVersionMap);
+
+    if (Array.isArray(setupComponentIds) && setupComponentIds.length > 0) {
+      // TODO throw message with exact component ids
+      const isListExhaustive = setupComponentIds.every(x => inputIds.includes(x));
+      if (!isListExhaustive) {
+        throw new Error('Please specify a version for each of the components');
+      }
     }
 
-    throw new Error('CHECK ALL COPONENTS');
-    if (Object.keys(data.componentVersionMap).length === 0) {
-      throw new Error('Please, specify component versions');
-    }
-
-    // existing component versions
     let errorMsg = '';
     for (const componentId in data.componentVersionMap) {
       const versionTag = data.componentVersionMap[componentId];
-      const version = this.findComponentVersion(componentId, versionTag);
+      const version = this.findVersion(componentId, versionTag);
       if (!version) {
         errorMsg = `${componentId}:${versionTag} does not exists!\n`;
       }
@@ -262,35 +305,32 @@ export class Ledger {
       errorMsg += `Test result will be saved, but make sure to add these versions`;
       this.warning(errorMsg);
     }
-
-    await this.addTo('tests', {
-      date: Date.now(),
-      ...data,
-    });
   }
 
   // GET
-  public getLatestComponentVersion(componentId: string) {
+  public getLatestVersion(componentId: string) {
     if (!this.data) throw new Error('no data'); // FIXME
     return this.data.versions.filter(x => x.componentId === componentId).sort((a, b) => semver.compare(b.tag, a.tag))[0];
   }
 
-  public getLatests(setupId?: string): Version[] {
+  public getLatestVersions(setupId?: string): Version[] {
     if (!this.data) throw new Error('no data'); // FIXME
 
     if (setupId) {
       const setup = this.data.setups.find(x => setupId === x.id);
       if (!setup) {
-        throw new Error('CRITICAL ERROR: setup with ID not found. Normally, this should not happen. Please contact the development team');
+        throw new Error(
+          `CRITICAL ERROR: setup with ${setupId} not found. Normally, this should not happen. Please contact the development team`,
+        );
       }
-      return setup.componentIds.map(this.getLatestComponentVersion);
+      return setup.componentIds.map(this.getLatestVersion);
     }
-    return this.data.components.map(x => x.id).map(this.getLatestComponentVersion);
+    return this.data.components.map(x => x.id).map(this.getLatestVersion);
   }
 
   public getSetupComponents(setupId: string) {
     if (!this.data) throw new Error('no data'); // FIXME
-    const setup = this.data.setups.find(x => x.id === setupId);
+    const setup = this.getSetupById(setupId);
     if (!setup) {
       throw new Error(`setup with id "${setupId}" is not found`);
     }
@@ -301,14 +341,19 @@ export class Ledger {
     return components;
   }
 
-  public getSetupTests(setupId: string) {
-    if (!this.data) throw new Error('no data'); // FIXME
-    return this.data.tests.filter(x => x.setupId === setupId);
+  private getSetupById(setupId: string) {
+    // FIXME this.data existence
+    return (this.data as any as LedgerData).setups.find((x: Setup) => x.id === setupId);
   }
 
-  private findComponentVersion(componentId: string, versionTag: string) {
-    if (!this.data) throw new Error('no data'); // FIXME
-    const componentVersions = this.data.versions.filter(x => x.componentId === componentId);
+  public getSetupTests(setupId: string) {
+    // FIXME this.data existence
+    return (this.data as any as LedgerData).tests.filter(x => x.setupId === setupId);
+  }
+
+  private findVersion(componentId: string, versionTag: string) {
+    // FIXME this.data existence
+    const componentVersions = (this.data as any as LedgerData).versions.filter(x => x.componentId === componentId);
     const existingVersion = componentVersions.find(x => x.tag === versionTag);
     return existingVersion;
   }

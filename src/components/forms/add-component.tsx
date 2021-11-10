@@ -25,7 +25,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => (
         await props.ledger.addComponent(values);
         window.location.reload(); // pro react development
       } catch (e) {
-        alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
+        alert('Action failed: ' + (e as any)?.message || JSON.stringify(e));
       } finally {
         setSubmitting(false);
       }

@@ -43,18 +43,16 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
                 return a;
               }, {});
 
-            const data = {
+            await props.ledger.addTest({
               setupId,
               status,
               componentVersionMap,
               description,
-            };
-            console.log(data);
-            await props.ledger.addTest(data);
+            });
 
             window.location.reload(); // pro react development
           } catch (e) {
-            alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
+            alert('Action failed: ' + (e as any)?.message || JSON.stringify(e));
             // not so sure about that finally
           } finally {
             setSubmitting(false);
@@ -82,7 +80,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
             <Field id="add-component-field-status" type="text" name="status" placeholder="anything (passed, failed?)" />
             <ErrorMessage name="status" component="div" />
 
-            <label htmlFor="add-test-field-description">Description</label>
+            <label htmlFor="add-test-field-description">Description (optional)</label>
             <Field id="add-component-field-description" type="text" name="description" placeholder="something informative" />
             <ErrorMessage name="description" component="div" />
 
@@ -96,10 +94,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
         )}
       </Formik>
       <Question>
-        <span>IDEA #1: Component version picker</span>
-      </Question>
-      <Question>
-        <span>IDEA #2: Allow to configure hook on test result submission</span>
+        <span>IDEA #1: Allow to configure hook on test result submission</span>
         <br />
         <span>| {'e.g. if (test.status === "failed") req.("POST our.mail.proxy/?recipients={setup.maintainers}", test)'}</span>
       </Question>
@@ -155,7 +150,6 @@ function Versions(props: { ledger: Ledger; components: Component[] }) {
                 <Field
                   id={`add-test-field-component-${component.id}`}
                   name={`component-${component.id}`}
-                  // placeholder="x.y.z"
                   component={SelectField()}
                   options={vers[component.id].map(versionTag => ({ value: versionTag, label: versionTag }))}
                 />

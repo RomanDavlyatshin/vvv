@@ -21,12 +21,14 @@ import { useState } from 'react';
 import { LedgerData } from '../../lib/types';
 import { Ledger } from '../../lib/ledger';
 
+const VERSION_PLACEHOLDER = 'SemVer, e.g. x.y.z';
+
 export default (props: { ledger: Ledger; data: LedgerData }) => {
   if (!Array.isArray(props.data.components) || props.data.components.length === 0) {
     return <Spinner>No available components. Create components first</Spinner>;
   }
   const components = props.data.components.map(x => ({ value: x.id, label: x.name }));
-  const [versionPlaceholder, setVersionPlaceholder] = useState('x.y.z');
+  const [versionPlaceholder, setVersionPlaceholder] = useState(VERSION_PLACEHOLDER);
   return (
     <>
       <h3>New version</h3>
@@ -41,7 +43,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
 
             window.location.reload(); // pro react development
           } catch (e) {
-            alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
+            alert('Action failed: ' + (e as any)?.message || JSON.stringify(e));
           } finally {
             setSubmitting(false);
           }
@@ -56,9 +58,9 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
               component={SelectField(async (componentId: string, form) => {
                 const ledger = await connection.getLedgerInstance();
                 if (!ledger) return;
-                const latestVersion = await ledger.getLatestComponentVersion(componentId);
+                const latestVersion = await ledger.getLatestVersion(componentId);
                 if (!latestVersion) {
-                  setVersionPlaceholder('x.y.z');
+                  setVersionPlaceholder(VERSION_PLACEHOLDER);
                   return;
                 }
                 setVersionPlaceholder(`latest is ${latestVersion.tag}`);

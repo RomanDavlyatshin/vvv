@@ -29,9 +29,9 @@ import FormAddTest from './forms/add-test';
 import VersionTable from './tables/version';
 import ElapsedTimer from './elapsed-timer';
 import SetupTestsTable from './tables/setup-tests';
-import { C } from './styles';
-import { LedgerData } from '../lib/types';
+import { DebugData } from './DebugData';
 import NoRender from './no-render';
+import Question from './question';
 
 function App() {
   return (
@@ -62,11 +62,16 @@ function RenderStuff() {
       <div>
         Refreshed <ElapsedTimer />
       </div>
-      <JSONDataStyled>
+      <TopFixedWrapper>
         <NoRender label="Debug Data">
-          <JSONData data={data} />
+          <DebugData data={data} />
         </NoRender>
-      </JSONDataStyled>
+      </TopFixedWrapper>
+
+      {/* VERSIONS */}
+      <h3 className="mt-3">VERSIONS</h3>
+      <VersionTable versions={data.versions} components={data.components} ledger={ledger} />
+
       {/*SETUPS  */}
       <h3 className="mt-3">SETUPS</h3>
       <div className="row">
@@ -80,8 +85,10 @@ function RenderStuff() {
           );
         })}
       </div>
-      <h3 className="mt-3">VERSIONS</h3>
-      <VersionTable versions={data.versions} components={data.components} ledger={ledger} />
+      <Question>IDEA #1: Append logs / links to logs</Question>
+      <Question>IDEA #2: Allow to use @ to link Jira users/Jira issues?</Question>
+      <Question>IDEA #3: Allow attachments?</Question>
+      <Question>IDEA #4: Click-on-version/component to navigate to commit/rep/artifact?</Question>
 
       {/*FORMS  */}
       <div className="row mt-5">
@@ -102,49 +109,12 @@ function RenderStuff() {
   );
 }
 
-const JSONDataStyled = styled.div`
+const TopFixedWrapper = styled.div`
   position: fixed;
   top: 0;
   right: 0;
-  font-size: 12px;
-  background-color: rgb(0, 0, 0);
   overflow-y: auto;
+  background-color: black;
   max-height: 30vh;
 `;
-function JSONData({ data }: { data: LedgerData }) {
-  return (
-    <div className="row">
-      <div className="col-3">
-        <div>Components</div>
-        <Stats label="Components" data={data.components} />
-      </div>
-      <div className="col-3">
-        <div>Setups</div>
-        <Stats label="Setups" data={data.setups} />
-      </div>
-      <div className="col-3">
-        <div>Versions</div>
-        <Stats label="Versions" data={data.versions} keyProp="date" />
-      </div>
-      <div className="col-3">
-        <div>Tests</div>
-        <Stats label="Tests" data={data.tests} keyProp="date" />
-      </div>
-    </div>
-  );
-}
-function Stats(props: any) {
-  const { data, keyProp = 'id' } = props;
-  if (!Array.isArray(data)) return <>{'...'}</>;
-  return <div>{data.map((x: any) => renderStat(x[keyProp], x))}</div>;
-}
-
-function renderStat(key: string, data: any) {
-  return (
-    <div className="mb-2" key={key}>
-      {JSON.stringify(data)},
-    </div>
-  );
-}
-
 export default App;

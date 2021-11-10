@@ -73,3 +73,16 @@ form > * {
   background-color: rgb(45, 45, 45);
   color: inherit;
 }
+
+* ::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
+}
+
+* ::-webkit-scrollbar-track {
+  background-color: rgb(45, 45, 45);
+}
+
+* ::-webkit-scrollbar-thumb {
+  background-color: rgb(60, 60, 60);
+}

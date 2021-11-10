@@ -35,6 +35,9 @@ const S = {
   Table: styled.table`
     white-space: nowrap;
   `,
+  ScrollXWrapper: styled.div`
+    overflow-x: auto;
+  `,
 };
 
 export default function VersionTable(props: VersionTableProps) {
@@ -53,12 +56,13 @@ export default function VersionTable(props: VersionTableProps) {
     () => [
       {
         Header: 'Release date',
+        Latest: 'latests:',
         accessor: 'release',
         Cell: (props: any) => {
           return <ElapsedTimer start={props.row.values.release} />;
         },
       },
-      ...components.map(c => ({ Header: c.name, Latest: props.ledger.getLatestComponentVersion(c.id)?.tag, accessor: c.id })),
+      ...components.map(c => ({ Header: c.name, Latest: props.ledger.getLatestVersion(c.id)?.tag || '-', accessor: c.id })),
     ],
     [], // FIXME
   );
@@ -77,48 +81,61 @@ export default function VersionTable(props: VersionTableProps) {
 
   return (
     <div>
+      <S.ScrollXWrapper>
+        <S.Table {...getTableProps()}>
+          <thead>
+            {headerGroups.map(headerGroup => (
+              <>
+                <T.Tr {...headerGroup.getHeaderGroupProps()}>
+                  {headerGroup.headers.map(column => {
+                    return (
+                      <T.Td {...column.getHeaderProps()}>
+                        <div>{(column as any).Latest && column.render('Latest')}</div>
+                      </T.Td>
+                    );
+                  })}
+                </T.Tr>
+                <T.Tr {...headerGroup.getHeaderGroupProps()}>
+                  {headerGroup.headers.map(column => {
+                    return (
+                      <T.Th {...column.getHeaderProps()}>
+                        <div>{column.render('Header')}</div>
+                      </T.Th>
+                    );
+                  })}
+                </T.Tr>
+              </>
+            ))}
+          </thead>
+          {/* Apply the table body props */}
+          <tbody {...getTableBodyProps()}>
+            {page.map((row: any) => {
+              prepareRow(row);
+              return (
+                <T.Tr {...row.getRowProps()}>
+                  {row.cells.map((cell: any) => {
+                    return <T.Td {...cell.getCellProps()}>{cell.render('Cell')}</T.Td>;
+                  })}
+                </T.Tr>
+              );
+            })}
+          </tbody>
+        </S.Table>
+      </S.ScrollXWrapper>
+      <Pagination tableInstance={tableInstance} />
       <Question>
-        <span>1. Filter tags "stable only" | "prerelease" | "experimental", etc</span>
+        <span>1. Filter tags e.g. x.y.z "stable only" | x.y.z-*"prerelease" | x.y.z-my-feature "scratch", etc</span>
         <br />
         <span>2. Allow sorting by either date or semver</span>
         <br />
         <span>3. Display latests row in setups</span>
+        <br />
+        <span>4. Allow temporarily hiding all but one column</span>
+        <br />
+        <span>5. Allow to reorder/hide columns (localStorage)</span>
+        <br />
+        <span>6. Save pagination settings (localStorage)</span>
       </Question>
-      <div></div>
-      <S.Table {...getTableProps()}>
-        <thead>
-          {headerGroups.map(headerGroup => (
-            <>
-              <T.Tr {...headerGroup.getHeaderGroupProps()}>
-                {headerGroup.headers.map(column => {
-                  debugger;
-                  return (
-                    // <T.Th {...column.getHeaderProps()}>{column.render('Header')}</T.Th>
-                    <T.Th {...column.getHeaderProps()}>
-                      <div>{column.render('Header')}</div>
-                      <div>{(column as any).Latest ? column.render('Latest') : '__'}</div>
-                    </T.Th>
-                  );
-                })}
-              </T.Tr>
-            </>
-          ))}
-        </thead>
-        {/* Apply the table body props */}
-        <tbody {...getTableBodyProps()}>
-          {page.map((row: any) => {
-            prepareRow(row);
-            return (
-              <T.Tr {...row.getRowProps()}>
-                {row.cells.map((cell: any) => {
-                  return <T.Td {...cell.getCellProps()}>{cell.render('Cell')}</T.Td>;
-                })}
-              </T.Tr>
-            );
-          })}
-        </tbody>
-      </S.Table>
-      <Pagination tableInstance={tableInstance} />
     </div>
   );
 }

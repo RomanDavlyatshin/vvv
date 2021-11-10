@@ -36,7 +36,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
             await props.ledger.addSetup({ id, name, componentIds });
             window.location.reload(); // pro react development
           } catch (e) {
-            alert('failed to update ledger: ' + (e as any)?.message || JSON.stringify(e));
+            alert('Action failed: ' + (e as any)?.message || JSON.stringify(e));
           } finally {
             setSubmitting(false);
           }
@@ -49,7 +49,7 @@ export default (props: { ledger: Ledger; data: LedgerData }) => {
             <ErrorMessage name="id" component="div" />
 
             <label htmlFor="add-setup-field-name">Human-readable name</label>
-            <Field id="add-setup-field-name" type="text" name="name" placeholder="Awesome Services Flow" />
+            <Field id="add-setup-field-name" type="text" name="name" placeholder="My Awesome Setup" />
             <ErrorMessage name="name" component="div" />
 
             <label htmlFor="id">Select components</label>
